@@ -34,22 +34,45 @@ Social platform for emotional storytelling with user authentication and profilin
 ##  Project Structure
 ```
 AURA/
-├── frontend/          # React application
+├── frontend/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── StoryCircle.jsx
+│   │   │   ├── PostCard.jsx
+│   │   │   ├── NFTCard.jsx
+│   │   │   └── ...
 │   │   ├── pages/
+│   │   │   ├── Login.jsx          
+│   │   │   ├── Signup.jsx         
+│   │   │   ├── Home.jsx           
+│   │   │   ├── Marketplace.jsx    
+│   │   │   ├── CreateMemory.jsx   
+│   │   │   └── Profile.jsx
 │   │   ├── context/
-│   │   └── App.js
+│   │   │   └── AuthContext.jsx
+│   │   ├── App.jsx
+│   │   └── index.js
 │   └── package.json
 │
-├── backend/           # Node.js API
+├── backend/
 │   ├── models/
+│   │   ├── User.js
+│   │   ├── Memory.js (posts/memories)
+│   │   └── NFT.js
 │   ├── routes/
+│   │   ├── auth.js
+│   │   ├── users.js
+│   │   ├── memories.js
+│   │   └── marketplace.js
 │   ├── middleware/
+│   │   └── auth.js
 │   ├── config/
+│   │   └── db.js
 │   └── server.js
 │
-└── docs/             # Documentation
+└── docs/
+    └── SRS.md
 ```
 
 ##  Team
