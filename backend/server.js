@@ -18,10 +18,38 @@ connectDB();
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      process.env.FRONTEND_URL,
+      // Regex to allow local network IP addresses for mobile testing
+      /http:\/\/192\.168\.\d+\.\d+:\d+/
+    ].filter(Boolean),
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
   })
 );
+
+// Explicitly handle preflight requests for all routes
+app.options(/\/.*/, cors());
+
+// Add explicit headers to every response as a fallback
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (
+    origin === "http://localhost:3000" ||
+    origin === "http://127.0.0.1:3000" ||
+    origin === process.env.FRONTEND_URL ||
+    /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)
+  )) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  next();
+});
 app.use(express.json());
 
 // Session middleware (must be before passport)
