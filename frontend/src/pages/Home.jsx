@@ -122,6 +122,11 @@ const Home = () => {
       const response = await api.get(`/memories/feed?page=${pageNum}&limit=10`);
 
       if (response.data.success) {
+        console.log("All memories:", response.data.memories.map(m => ({
+          id: m._id,
+          video: m.video,
+          image: m.image
+        })));
         if (isInitial) {
           setMemories(response.data.memories || []);
         } else {
@@ -199,7 +204,7 @@ const Home = () => {
       setFollowingStatus((prev) => ({ ...prev, [userId]: false }));
       showError(
         error.response?.data?.message ||
-          "Failed to follow user. Please try again."
+        "Failed to follow user. Please try again."
       );
     }
   };
@@ -482,11 +487,10 @@ const Home = () => {
             <nav className="space-y-1">
               <motion.button
                 onClick={() => navigate("/")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActiveRoute("/")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActiveRoute("/")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -496,11 +500,10 @@ const Home = () => {
 
               <motion.button
                 onClick={() => navigate("/discover")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActiveRoute("/discover")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActiveRoute("/discover")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -510,11 +513,10 @@ const Home = () => {
 
               <motion.button
                 onClick={() => navigate("/marketplace")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActiveRoute("/marketplace")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActiveRoute("/marketplace")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -524,11 +526,10 @@ const Home = () => {
 
               <motion.button
                 onClick={() => navigate("/messages")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActiveRoute("/messages")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActiveRoute("/messages")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -538,11 +539,10 @@ const Home = () => {
 
               <motion.button
                 onClick={() => navigate("/notifications")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
-                  isActiveRoute("/notifications")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${isActiveRoute("/notifications")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -555,11 +555,10 @@ const Home = () => {
 
               <motion.button
                 onClick={() => navigate("/bookmarks")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActiveRoute("/bookmarks")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActiveRoute("/bookmarks")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -569,11 +568,10 @@ const Home = () => {
 
               <motion.button
                 onClick={() => navigate("/profile")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActiveRoute("/profile")
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActiveRoute("/profile")
+                  ? "bg-purple-600 text-white"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -651,11 +649,10 @@ const Home = () => {
               <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1 ml-auto">
                 <motion.button
                   onClick={() => setViewMode("2d")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                    viewMode === "2d"
-                      ? "bg-purple-600 text-white"
-                      : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === "2d"
+                    ? "bg-purple-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                    }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -664,11 +661,10 @@ const Home = () => {
                 </motion.button>
                 <motion.button
                   onClick={() => setViewMode("3d")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                    viewMode === "3d"
-                      ? "bg-purple-600 text-white"
-                      : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === "3d"
+                    ? "bg-purple-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                    }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -776,11 +772,10 @@ const Home = () => {
                     <motion.button
                       onClick={(e) => handleFollow(suggestedUser.id, e)}
                       disabled={followingStatus[suggestedUser.id]}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        followingStatus[suggestedUser.id]
-                          ? "bg-white/10 text-slate-400 cursor-not-allowed"
-                          : "bg-purple-600 text-white hover:bg-purple-500"
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${followingStatus[suggestedUser.id]
+                        ? "bg-white/10 text-slate-400 cursor-not-allowed"
+                        : "bg-purple-600 text-white hover:bg-purple-500"
+                        }`}
                       whileHover={
                         !followingStatus[suggestedUser.id]
                           ? { scale: 1.05 }

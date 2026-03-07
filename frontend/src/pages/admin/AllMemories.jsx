@@ -190,7 +190,7 @@ const AllMemories = () => {
                 {/* Memory Content */}
                 <div className="p-4">
                   {/* User Info */}
-                  <motion.div 
+                  <motion.div
                     className="flex items-center gap-3 mb-3 cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => navigate(`/user/${memory.user?._id || memory.user?.id}`)}
                     whileHover={{ scale: 1.05 }}

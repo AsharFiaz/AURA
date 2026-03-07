@@ -4,6 +4,16 @@ const User = require("../models/User");
 const auth = require("../middleware/auth");
 const upload = require("../middleware/upload");
 const cloudinary = require("../config/cloudinary");
+const multer = require('multer');
+
+const videoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) cb(null, true);
+    else cb(new Error('Only video files are allowed!'), false);
+  },
+});
 
 const router = express.Router();
 
@@ -179,6 +189,33 @@ router.post("/upload", auth, upload.single("image"), async (req, res) => {
   }
 });
 
+router.post('/upload-video', auth, videoUpload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file uploaded.' });
+    }
+
+    const base64String = req.file.buffer.toString('base64');
+    const dataURI = `data:${req.file.mimetype};base64,${base64String}`;
+
+    const uploadResult = await cloudinary.uploader.upload(dataURI, {
+      folder: 'aura-videos',
+      resource_type: 'video',
+      transformation: [{ quality: 'auto', fetch_format: 'mp4' }],
+    });
+
+    const mediaUrl = uploadResult.secure_url || uploadResult.url;
+    if (!mediaUrl) {
+      return res.status(500).json({ success: false, message: 'Failed to get video URL.' });
+    }
+
+    res.json({ success: true, mediaUrl });
+  } catch (error) {
+    console.error('Video upload error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Error uploading video.' });
+  }
+});
+
 // GET /api/memories/feed - Get all public memories with pagination
 router.get("/feed", auth, async (req, res) => {
   try {
@@ -202,6 +239,8 @@ router.get("/feed", auth, async (req, res) => {
     const memoriesWithLikesCount = memories.map((memory) => ({
       ...memory,
       likesCount: memory.likes.length,
+      image: memory.image || null,
+      video: memory.video || null, // ← explicitly include video
     }));
 
     // Check if there are more memories
@@ -225,14 +264,15 @@ router.get("/feed", auth, async (req, res) => {
 // POST /api/memories - Create new memory
 router.post("/", auth, async (req, res) => {
   try {
-    const { caption, image, emotions, visibility } = req.body;
+    const { caption, image, video, emotions, visibility } = req.body;
 
     const memory = new Memory({
       user: req.user.id,
       caption,
       image: image || null,
+      video: video || null,
       emotions: emotions || [],
-      visibility: visibility || "public",
+      visibility: visibility || 'public',
     });
 
     const savedMemory = await memory.save();
@@ -355,6 +395,8 @@ router.get("/user/:userId", auth, async (req, res) => {
     const memoriesWithLikesCount = memories.map((memory) => ({
       ...memory,
       likesCount: memory.likes.length,
+      image: memory.image || null,
+      video: memory.video || null, // ← add this
     }));
 
     res.json({
