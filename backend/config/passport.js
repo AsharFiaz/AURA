@@ -8,9 +8,8 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${
-        process.env.BACKEND_URL || "http://localhost:5000"
-      }/api/auth/google/callback`,
+      callbackURL: `${process.env.BACKEND_URL || "http://localhost:5000"
+        }/api/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -40,8 +39,7 @@ passport.use(
             email: profile.emails[0].value,
             username: username,
             password: `google_${profile.id}_${Date.now()}`, // Dummy password for OAuth users
-            interests: [],
-            emotions: [],
+            personality: { O: null, C: null, E: null, A: null, N: null },
           });
 
           return done(null, user);

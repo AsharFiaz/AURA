@@ -26,8 +26,7 @@ router.get("/me", auth, async (req, res) => {
       id: user._id,
       username: user.username,
       email: user.email,
-      interests: user.interests,
-      emotions: user.emotions,
+      personality: user.personality || { O: null, C: null, E: null, A: null, N: null },
       createdAt: user.createdAt,
       followers: user.followers || [],
       following: user.following || [],
@@ -50,27 +49,7 @@ router.get("/me", auth, async (req, res) => {
 // PUT /api/users/profile - Update user profile
 router.put("/profile", auth, async (req, res) => {
   try {
-    const { username, interests, emotions, profilePicture } = req.body;
-
-    // Validate interests array (max 3)
-    if (interests && Array.isArray(interests)) {
-      if (interests.length > 3) {
-        return res.status(400).json({
-          success: false,
-          message: "Interests array cannot have more than 3 items",
-        });
-      }
-    }
-
-    // Validate emotions array (max 3)
-    if (emotions && Array.isArray(emotions)) {
-      if (emotions.length > 3) {
-        return res.status(400).json({
-          success: false,
-          message: "Emotions array cannot have more than 3 items",
-        });
-      }
-    }
+    const { username, personality, profilePicture } = req.body;
 
     // Find user by ID
     const user = await User.findById(req.user.id);
@@ -86,11 +65,8 @@ router.put("/profile", auth, async (req, res) => {
     if (username !== undefined) {
       user.username = username;
     }
-    if (interests !== undefined) {
-      user.interests = interests;
-    }
-    if (emotions !== undefined) {
-      user.emotions = emotions;
+    if (personality !== undefined) {
+      user.personality = personality;
     }
     // Allow setting profilePicture to null to remove it
     if (profilePicture !== undefined) {
@@ -115,8 +91,7 @@ router.put("/profile", auth, async (req, res) => {
       id: updatedUser._id,
       username: updatedUser.username,
       email: updatedUser.email,
-      interests: updatedUser.interests,
-      emotions: updatedUser.emotions,
+      personality: updatedUser.personality || { O: null, C: null, E: null, A: null, N: null },
       createdAt: updatedUser.createdAt,
       profilePicture: updatedUser.profilePicture || null,
       followers: updatedUser.followers || [],
@@ -280,8 +255,7 @@ router.get("/:userId", async (req, res) => {
       id: user._id,
       username: user.username,
       email: user.email,
-      interests: user.interests,
-      emotions: user.emotions,
+      personality: user.personality || { O: null, C: null, E: null, A: null, N: null },
       createdAt: user.createdAt,
       memoryCount,
       followers: user.followers || [],
