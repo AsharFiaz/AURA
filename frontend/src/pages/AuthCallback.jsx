@@ -17,39 +17,34 @@ const AuthCallback = () => {
     const handleCallback = async () => {
       if (token && success === "true") {
         try {
-          // Store token temporarily to fetch user data
           localStorage.setItem("token", token);
 
-          // Fetch user data from backend
           const response = await api.get("/users/me");
           if (response.data.success && response.data.user) {
             const userData = response.data.user;
             login(token, userData);
-            // Clean up URL
             setSearchParams({});
-            // Navigate to home
-            navigate("/");
+
+            // Check if personality quiz has been completed
+            const p = userData.personality;
+            const needsQuiz = !p || Object.values(p).every((v) => v === null);
+            navigate(needsQuiz ? "/onboarding" : "/");
           } else {
-            console.error("Failed to fetch user data");
             localStorage.removeItem("token");
             navigate("/login?error=Failed to fetch user data");
           }
         } catch (err) {
           console.error("OAuth callback error:", err);
           localStorage.removeItem("token");
-          const errorMessage =
-            err.response?.data?.message ||
-            "Failed to complete authentication. Please try again.";
-          navigate(`/login?error=${encodeURIComponent(errorMessage)}`);
+          const msg = err.response?.data?.message || "Failed to complete authentication. Please try again.";
+          navigate(`/login?error=${encodeURIComponent(msg)}`);
         }
       } else if (success === "false" || errorParam) {
-        // OAuth failed
-        const errorMessage = errorParam
+        const msg = errorParam
           ? decodeURIComponent(errorParam)
           : "OAuth authentication failed. Please try again.";
-        navigate(`/login?error=${encodeURIComponent(errorMessage)}`);
+        navigate(`/login?error=${encodeURIComponent(msg)}`);
       } else {
-        // No token or success param, redirect to login
         navigate("/login");
       }
     };
@@ -59,11 +54,7 @@ const AuthCallback = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <motion.div
-        className="text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
+      <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <motion.div
           className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"
           animate={{ rotate: 360 }}
@@ -77,4 +68,3 @@ const AuthCallback = () => {
 };
 
 export default AuthCallback;
-

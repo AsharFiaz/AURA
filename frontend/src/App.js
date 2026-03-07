@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AuthCallback from "./pages/AuthCallback";
+import PersonalityOnboarding from "./pages/PersonalityOnboarding";
 import Home from "./pages/Home";
 import CreateMemory from "./pages/CreateMemory";
 import Marketplace from "./pages/Marketplace";
@@ -108,6 +109,14 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <PersonalityOnboarding />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/"
             element={
