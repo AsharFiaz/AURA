@@ -15,6 +15,8 @@ import SearchUsers from "./pages/SearchUsers";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import Bookmarks from "./pages/Bookmarks";
+import PersonalityPage from "./pages/PersonalityPage";
+import ReportsPage from "./pages/ReportsPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AllUsers from "./pages/admin/AllUsers";
 import AllMemories from "./pages/admin/AllMemories";
@@ -112,6 +114,8 @@ function App() {
           <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+          <Route path="/personality" element={<ProtectedRoute><PersonalityPage /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
