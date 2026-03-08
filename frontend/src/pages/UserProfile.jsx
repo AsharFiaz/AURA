@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import { showSuccess, showError } from "../utils/toast";
 import { ProfileSkeleton, MemoryCardSkeleton } from "../components/common/LoadingSkeleton";
+import LockedMemoryCard from "../components/common/LockedMemoryCard";
 import {
   Mail, Heart, Grid, UserPlus, UserCheck,
   User as UserIcon, Home as HomeIcon, Search, Bell,
@@ -36,10 +37,8 @@ const Sidebar = ({ user, logout, navigate, location }) => {
       <nav className="flex flex-col gap-0.5 flex-1 px-2">
         {navLinks.map(item => (
           <button key={item.path} onClick={() => navigate(item.path)}
-            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"
-              }`}
-            style={{ minHeight: "48px", padding: "0 14px" }}
-          >
+            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+            style={{ minHeight: "48px", padding: "0 14px" }}>
             <item.icon className={`w-6 h-6 flex-shrink-0 transition-colors ${location.pathname === item.path ? "text-indigo-400" : "group-hover/item:text-indigo-400"}`} />
             <span className="ml-4 text-[15px] font-medium whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">{item.label}</span>
             {item.badge && <span className="absolute top-3 left-8 w-2 h-2 rounded-full bg-red-500" />}
@@ -95,6 +94,7 @@ const UserProfile = () => {
 
   const [profileUser, setProfileUser] = useState(null);
   const [memories, setMemories] = useState([]);
+  const [lockedCount, setLockedCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMemories, setLoadingMemories] = useState(true);
@@ -113,10 +113,18 @@ const UserProfile = () => {
     try { setLoading(true); const r = await api.get(`/users/${userId}`); if (r.data.success) setProfileUser(r.data.user); }
     catch (e) { console.error(e); } finally { setLoading(false); }
   };
+
   const fetchUserMemories = async () => {
-    try { setLoadingMemories(true); const r = await api.get(`/memories/user/${userId}`); if (r.data.success) setMemories(r.data.memories); }
-    catch (e) { console.error(e); } finally { setLoadingMemories(false); }
+    try {
+      setLoadingMemories(true);
+      const r = await api.get(`/memories/user/${userId}`);
+      if (r.data.success) {
+        setMemories(r.data.memories);
+        setLockedCount(r.data.lockedCount || 0);
+      }
+    } catch (e) { console.error(e); } finally { setLoadingMemories(false); }
   };
+
   const checkFollowingStatus = async () => {
     try { const r = await api.get(`/follow/check/${userId}`); if (r.data.success) setIsFollowing(r.data.isFollowing); }
     catch (e) { console.error(e); }
@@ -126,16 +134,27 @@ const UserProfile = () => {
     setIsFollowing(true);
     try {
       const r = await api.post(`/follow/${userId}`);
-      if (r.data.success) { refreshUser?.(); fetchUserProfile(); showSuccess(`Following ${profileUser?.username}! ✨`); }
-      else { setIsFollowing(false); showError("Failed to follow."); }
+      if (r.data.success) {
+        refreshUser?.();
+        fetchUserProfile();
+        // Re-fetch memories — following now unlocks "followers only" memories
+        fetchUserMemories();
+        showSuccess(`Following ${profileUser?.username}! ✨`);
+      } else { setIsFollowing(false); showError("Failed to follow."); }
     } catch (e) { setIsFollowing(false); showError(e.response?.data?.message || "Failed to follow."); }
   };
+
   const handleUnfollow = async () => {
     setIsFollowing(false);
     try {
       const r = await api.delete(`/follow/${userId}`);
-      if (r.data.success) { refreshUser?.(); fetchUserProfile(); showSuccess(`Unfollowed ${profileUser?.username}`); }
-      else { setIsFollowing(true); showError("Failed to unfollow."); }
+      if (r.data.success) {
+        refreshUser?.();
+        fetchUserProfile();
+        // Re-fetch memories — unfollow hides "followers only" memories again
+        fetchUserMemories();
+        showSuccess(`Unfollowed ${profileUser?.username}`);
+      } else { setIsFollowing(true); showError("Failed to unfollow."); }
     } catch (e) { setIsFollowing(true); showError(e.response?.data?.message || "Failed to unfollow."); }
   };
 
@@ -149,7 +168,6 @@ const UserProfile = () => {
   const followingCount = Array.isArray(profileUser?.following) ? profileUser.following.length : 0;
   const isOwnProfile = user?.id === userId;
 
-  // Loading skeleton
   if (loading) return (
     <div className="min-h-screen text-white" style={{ background: "#0d0d1a" }}>
       <div className="flex">
@@ -159,7 +177,6 @@ const UserProfile = () => {
     </div>
   );
 
-  // Not found
   if (!profileUser) return (
     <div className="min-h-screen flex items-center justify-center text-white" style={{ background: "#0d0d1a" }}>
       <div className="text-center">
@@ -184,7 +201,6 @@ const UserProfile = () => {
       <div className="flex">
         <Sidebar user={user} logout={logout} navigate={navigate} location={location} />
 
-        {/* Main */}
         <main className="flex-1 min-w-0">
           {/* Sticky header */}
           <div className="sticky top-0 z-40 px-6 py-3 flex items-center gap-3"
@@ -209,11 +225,8 @@ const UserProfile = () => {
             <motion.div className="rounded-2xl overflow-hidden"
               style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-
-              {/* Gradient banner */}
               <div className="h-28 relative overflow-hidden"
                 style={{ background: "linear-gradient(135deg,rgba(79,70,229,0.5),rgba(124,58,237,0.4),rgba(16,185,129,0.2))" }}>
-                {/* Abstract glow shapes */}
                 <div className="absolute -top-4 -left-4 w-40 h-40 rounded-full"
                   style={{ background: "radial-gradient(circle,rgba(99,102,241,0.4),transparent 70%)" }} />
                 <div className="absolute top-2 right-10 w-24 h-24 rounded-full"
@@ -221,9 +234,7 @@ const UserProfile = () => {
                 <div className="absolute bottom-0 left-1/2 w-32 h-16 rounded-full"
                   style={{ background: "radial-gradient(circle,rgba(16,185,129,0.2),transparent 70%)" }} />
               </div>
-
               <div className="px-5 pb-5">
-                {/* Avatar + follow row */}
                 <div className="flex items-end justify-between -mt-10 mb-3">
                   <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
                     style={{ boxShadow: "0 0 0 4px #13132a, 0 0 24px rgba(99,102,241,0.35)" }}>
@@ -231,19 +242,14 @@ const UserProfile = () => {
                       ? <img src={profileUser.profilePicture} alt={profileUser.username} className="w-full h-full object-cover" />
                       : profileUser.username?.charAt(0).toUpperCase() || "U"}
                   </div>
-
                   {user && !isOwnProfile && (
-                    <motion.button
-                      onClick={isFollowing ? handleUnfollow : handleFollow}
+                    <motion.button onClick={isFollowing ? handleUnfollow : handleFollow}
                       className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all"
                       style={isFollowing
                         ? { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#94a3b8" }
-                        : { background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", boxShadow: "0 4px 16px rgba(79,70,229,0.3)" }
-                      }
+                        : { background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", boxShadow: "0 4px 16px rgba(79,70,229,0.3)" }}
                       whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      {isFollowing
-                        ? <><UserCheck className="w-4 h-4" />Following</>
-                        : <><UserPlus className="w-4 h-4" />Follow</>}
+                      {isFollowing ? <><UserCheck className="w-4 h-4" />Following</> : <><UserPlus className="w-4 h-4" />Follow</>}
                     </motion.button>
                   )}
                   {isOwnProfile && (
@@ -254,8 +260,6 @@ const UserProfile = () => {
                     </button>
                   )}
                 </div>
-
-                {/* Name & meta */}
                 <h1 className="text-lg font-bold text-white mb-0.5">{profileUser.username}</h1>
                 <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-0.5">
                   <Mail className="w-3 h-3" /><span>{profileUser.email}</span>
@@ -268,7 +272,7 @@ const UserProfile = () => {
             <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-3"
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
               {[
-                { label: "Memories", value: memories.length },
+                { label: "Memories", value: memories.length + lockedCount },
                 { label: "Likes", value: totalLikes },
                 { label: "Followers", value: followersCount },
                 { label: "Following", value: followingCount },
@@ -288,8 +292,7 @@ const UserProfile = () => {
                 { id: "about", icon: <UserIcon className="w-4 h-4" />, label: "About" },
               ].map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? "text-indigo-400" : "text-slate-500 hover:text-white"
-                    }`}>
+                  className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? "text-indigo-400" : "text-slate-500 hover:text-white"}`}>
                   {tab.icon}{tab.label}
                   {activeTab === tab.id && (
                     <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-indigo-400" layoutId="userProfileTab" />
@@ -308,7 +311,7 @@ const UserProfile = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {[...Array(6)].map((_, i) => <MemoryCardSkeleton key={i} />)}
                     </div>
-                  ) : memories.length === 0 ? (
+                  ) : memories.length === 0 && lockedCount === 0 ? (
                     <div className="text-center py-16 rounded-2xl"
                       style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
                       <Grid className="w-10 h-10 text-slate-700 mx-auto mb-3" />
@@ -316,6 +319,7 @@ const UserProfile = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Visible memories */}
                       {memories.map((memory, i) => (
                         <motion.div key={memory._id} className="rounded-2xl p-4 transition-all"
                           style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
@@ -341,7 +345,22 @@ const UserProfile = () => {
                           </div>
                         </motion.div>
                       ))}
+
+                      {/* Locked placeholders for private memories */}
+                      {[...Array(lockedCount)].map((_, i) => (
+                        <LockedMemoryCard key={`locked-${i}`} index={memories.length + i} />
+                      ))}
                     </div>
+                  )}
+
+                  {/* Hint shown to non-followers when there are locked cards */}
+                  {!isOwnProfile && lockedCount > 0 && !isFollowing && (
+                    <motion.p className="text-center text-slate-600 text-xs mt-4"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                      {lockedCount} private {lockedCount === 1 ? "memory is" : "memories are"} hidden —{" "}
+                      <button className="text-indigo-400 hover:text-indigo-300 transition-colors"
+                        onClick={handleFollow}>follow to unlock followers-only content</button>
+                    </motion.p>
                   )}
                 </motion.div>
               )}
@@ -365,7 +384,6 @@ const UserProfile = () => {
                         </div>
                       ) : <p className="text-slate-600 text-sm">No interests added yet</p>}
                     </div>
-
                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "16px" }}>
                       <h3 className="text-xs font-bold text-white uppercase tracking-wide mb-3">Emotions</h3>
                       {profileUser.emotions?.length > 0 ? (
