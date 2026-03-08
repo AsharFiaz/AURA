@@ -18,14 +18,11 @@ const AuthCallback = () => {
       if (token && success === "true") {
         try {
           localStorage.setItem("token", token);
-
           const response = await api.get("/users/me");
           if (response.data.success && response.data.user) {
             const userData = response.data.user;
             login(token, userData);
             setSearchParams({});
-
-            // Check if personality quiz has been completed
             const p = userData.personality;
             const needsQuiz = !p || Object.values(p).every((v) => v === null);
             navigate(needsQuiz ? "/onboarding" : "/");
@@ -53,15 +50,35 @@ const AuthCallback = () => {
   }, [searchParams, setSearchParams, navigate, login]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <motion.div
-          className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
-        <p className="text-slate-300 text-lg">Completing authentication...</p>
-        <p className="text-slate-400 text-sm mt-2">Please wait</p>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0d0d1a" }}>
+      <motion.div
+        className="flex flex-col items-center gap-5"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        {/* Spinner */}
+        <div className="relative w-16 h-16">
+          <motion.div
+            className="absolute inset-0 rounded-full border-4 border-t-transparent border-indigo-500"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          {/* Inner glow ring */}
+          <div className="absolute inset-2 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(99,102,241,0.15), transparent)" }} />
+        </div>
+
+        {/* AURA wordmark */}
+        <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+          AURA
+        </span>
+
+        {/* Status text */}
+        <div className="text-center space-y-1">
+          <p className="text-white text-sm font-medium">Completing authentication…</p>
+          <p className="text-slate-600 text-xs">Please wait</p>
+        </div>
       </motion.div>
     </div>
   );
