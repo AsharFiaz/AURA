@@ -21,43 +21,38 @@ import AllMemories from "./pages/admin/AllMemories";
 import AllNFTs from "./pages/admin/AllNFTs";
 import LikesAnalytics from "./pages/admin/LikesAnalytics";
 
-// Protected Route Component
+// Shown while AuthContext is reading localStorage — prevents ANY child
+// component from mounting and firing API calls before the token is known.
+const LoadingScreen = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-900">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      <span className="text-slate-400 text-sm">Loading AURA…</span>
+    </div>
+  </div>
+);
+
+// Blocks child from mounting until auth resolves, then checks login
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-        Loading...
-      </div>
-    );
-  }
-
-  return user ? children : <Navigate to="/login" />;
+  if (loading) return <LoadingScreen />;
+  return user ? children : <Navigate to="/login" replace />;
 }
 
-// Admin Route Component - Only accessible to admins
+// Same but also checks for admin role
 function AdminRoute({ children }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-        Loading...
-      </div>
-    );
-  }
-
-  // Check if user is authenticated and is admin
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  if (user.role !== "admin") {
-    return <Navigate to="/" />;
-  }
-
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "admin") return <Navigate to="/" replace />;
   return children;
+}
+
+// Redirects logged-in users away from /login and /signup
+function PublicRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  return user ? <Navigate to="/" replace /> : children;
 }
 
 function App() {
@@ -65,9 +60,7 @@ function App() {
     <AuthProvider>
       <Toaster
         position="bottom-right"
-        containerStyle={{
-          bottom: 80, // Move up 80px from bottom to clear footer
-        }}
+        containerStyle={{ bottom: 80 }}
         toastOptions={{
           duration: 3000,
           style: {
@@ -80,10 +73,7 @@ function App() {
             border: "1px solid rgba(255, 255, 255, 0.1)",
           },
           success: {
-            iconTheme: {
-              primary: "#ffffff",
-              secondary: "#7c3aed",
-            },
+            iconTheme: { primary: "#ffffff", secondary: "#7c3aed" },
             style: {
               background: "linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)",
               color: "#ffffff",
@@ -91,10 +81,7 @@ function App() {
             },
           },
           error: {
-            iconTheme: {
-              primary: "#f87171",
-              secondary: "#1f2937",
-            },
+            iconTheme: { primary: "#f87171", secondary: "#1f2937" },
             style: {
               background: "#1f2937",
               color: "#f87171",
@@ -106,142 +93,33 @@ function App() {
       />
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          {/* Public — redirect away if already logged in */}
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+
+          {/* OAuth callback — no guard needed */}
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute>
-                <PersonalityOnboarding />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/create"
-            element={
-              <ProtectedRoute>
-                <CreateMemory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/marketplace"
-            element={
-              <ProtectedRoute>
-                <Marketplace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/discover"
-            element={
-              <ProtectedRoute>
-                <Discover />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/user/:userId"
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <SearchUsers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/bookmarks"
-            element={
-              <ProtectedRoute>
-                <Bookmarks />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <AdminRoute>
-                <AllUsers />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/memories"
-            element={
-              <AdminRoute>
-                <AllMemories />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/nfts"
-            element={
-              <AdminRoute>
-                <AllNFTs />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/likes"
-            element={
-              <AdminRoute>
-                <LikesAnalytics />
-              </AdminRoute>
-            }
-          />
-          {/* Redirect /admin to /admin/dashboard */}
-          <Route
-            path="/admin"
-            element={<Navigate to="/admin/dashboard" replace />}
-          />
+
+          {/* Protected */}
+          <Route path="/onboarding" element={<ProtectedRoute><PersonalityOnboarding /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/create" element={<ProtectedRoute><CreateMemory /></ProtectedRoute>} />
+          <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+          <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+          <Route path="/search" element={<ProtectedRoute><SearchUsers /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+
+          {/* Admin */}
+          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><AllUsers /></AdminRoute>} />
+          <Route path="/admin/memories" element={<AdminRoute><AllMemories /></AdminRoute>} />
+          <Route path="/admin/nfts" element={<AdminRoute><AllNFTs /></AdminRoute>} />
+          <Route path="/admin/likes" element={<AdminRoute><LikesAnalytics /></AdminRoute>} />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
