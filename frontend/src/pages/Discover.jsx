@@ -162,7 +162,10 @@ const Discover = () => {
           <div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-between"
             style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <div>
-              <h1 className="text-base font-bold text-white">Discover People</h1>
+              <h1 className="text-base font-bold text-white flex items-center gap-2">
+                <Compass className="w-5 h-5 text-indigo-400" />
+                Discover People
+              </h1>
               <p className="text-slate-600 text-xs mt-0.5">Find and connect with the AURA community</p>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer"

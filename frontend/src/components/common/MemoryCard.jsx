@@ -4,6 +4,7 @@ import { MessageCircle, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import LikeButton from "./LikeButton";
+import OceanPatternCanvas from "./OceanPatternCanvas";
 
 // ─── Derive a card theme from the OCEAN vector ────────────────────────────────
 // Finds the dominant trait and maps it to a subtle accent color.
@@ -83,6 +84,7 @@ const MemoryCard = memo(
 
     // Derive theme from this memory's OCEAN vector
     const theme = getOceanTheme(memory.oceanVector);
+    const hasMedia = memory.image || memory.video;
 
     const handleCommentClick = useCallback(() => {
       onCommentClick(memory);
@@ -102,7 +104,9 @@ const MemoryCard = memo(
       <motion.div
         className="backdrop-blur-lg rounded-2xl border p-4 transition-all"
         style={{
-          background: `linear-gradient(135deg, #0f172a 0%, ${theme.glow} 100%)`,
+          background: hasMedia
+            ? `linear-gradient(135deg, #0f172a 0%, ${theme.glow} 100%)`
+            : `linear-gradient(135deg, #0f172a 0%, ${theme.accent}18 60%, ${theme.accent}08 100%)`,
           borderColor: theme.border,
           boxShadow: memory.oceanVector
             ? `0 0 0 1px ${theme.border}, 0 4px 24px ${theme.glow}`
@@ -178,6 +182,15 @@ const MemoryCard = memo(
               preload="metadata"
             />
           </div>
+        )}
+
+        {/* Procedural pattern — text-only memories with an OCEAN vector */}
+        {!memory.image && !memory.video && memory.oceanVector && (
+          <OceanPatternCanvas
+            oceanVector={memory.oceanVector}
+            height={180}
+            className="mb-3"
+          />
         )}
 
         {/* Actions */}
