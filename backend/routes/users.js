@@ -302,21 +302,16 @@ router.get("/me/report", auth, async (req, res) => {
       .slice(0, 8)
       .map(([emotion, count]) => ({ emotion, count }));
 
-    // Followers gained per month (last 6 months)
-    const user = await User.findById(userId)
-      .populate("followers", "createdAt")
-      .lean();
-
     const now = new Date();
-    const followersByMonth = [];
+    const memoriesByMonth = [];
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
-      const count = (user.followers || []).filter(f => {
-        const d = new Date(f.createdAt);
+      const count = memories.filter(m => {
+        const d = new Date(m.createdAt);
         return d >= monthStart && d <= monthEnd;
       }).length;
-      followersByMonth.push({
+      memoriesByMonth.push({
         month: monthStart.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
         count,
       });
@@ -334,7 +329,7 @@ router.get("/me/report", auth, async (req, res) => {
         totalLikes,
         totalComments,
         topEmotions,
-        followersByMonth,
+        memoriesByMonth,
         topMemory: topMemory ? {
           id: topMemory._id,
           caption: topMemory.caption,

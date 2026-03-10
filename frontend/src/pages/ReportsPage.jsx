@@ -136,7 +136,7 @@ const ReportsPage = () => {
         { icon: MessageCircle, label: "Total Comments", value: report.totalComments, color: "#3b82f6" },
         {
             icon: Users, label: "Total Followers",
-            value: (report.followersByMonth || []).reduce((s, m) => s + m.count, 0),
+            value: user?.followers?.length || 0,
             color: "#10b981"
         },
     ] : [];
@@ -226,17 +226,17 @@ const ReportsPage = () => {
                                     )}
                                 </motion.div>
 
-                                {/* ── Followers by month ── */}
+                                {/* ── Memories by month ── */}
                                 <motion.div className="rounded-2xl p-6"
                                     style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
                                     initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                                     <div className="flex items-center gap-2 mb-5">
                                         <TrendingUp className="w-4 h-4 text-green-400" />
-                                        <h2 className="text-white font-bold text-sm">Followers Gained — Last 6 Months</h2>
+                                        <h2 className="text-white font-bold text-sm">Memories Posted — Last 6 Months</h2>
                                     </div>
-                                    {report.followersByMonth?.length > 0 ? (
+                                    {report.memoriesByMonth?.length > 0 ? (
                                         <ResponsiveContainer width="100%" height={180}>
-                                            <BarChart data={report.followersByMonth} barCategoryGap="35%">
+                                            <BarChart data={report.memoriesByMonth} barCategoryGap="35%">
                                                 <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
                                                 <YAxis tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
                                                 <Tooltip content={({ active, payload }) => {
@@ -245,7 +245,7 @@ const ReportsPage = () => {
                                                         <div className="px-3 py-2 rounded-xl text-xs text-white"
                                                             style={{ background: "#1e1e3a", border: "1px solid rgba(255,255,255,0.1)" }}>
                                                             <p className="font-semibold">{payload[0].payload.month}</p>
-                                                            <p className="text-slate-400">{payload[0].value} new {payload[0].value === 1 ? "follower" : "followers"}</p>
+                                                            <p className="text-slate-400">{payload[0].value} {payload[0].value === 1 ? "memory" : "memories"}</p>
                                                         </div>
                                                     );
                                                 }} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
@@ -253,7 +253,7 @@ const ReportsPage = () => {
                                             </BarChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <p className="text-slate-600 text-sm text-center py-8">No follower data yet.</p>
+                                        <p className="text-slate-600 text-sm text-center py-8">No memories data yet.</p>
                                     )}
                                 </motion.div>
 
