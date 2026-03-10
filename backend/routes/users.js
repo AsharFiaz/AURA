@@ -275,4 +275,72 @@ router.get("/:userId", async (req, res) => {
   }
 });
 
+// GET /api/users/me/report — personal stats report
+// Add this block just before module.exports = router;
+router.get("/me/report", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // All user's memories
+    const memories = await Memory.find({ user: userId }).lean();
+
+    // Basic counts
+    const totalMemories = memories.length;
+    const totalLikes = memories.reduce((s, m) => s + (m.likes?.length || 0), 0);
+    const totalComments = memories.reduce((s, m) => s + (m.comments?.length || 0), 0);
+
+    // Emotion tag frequency
+    const emotionMap = {};
+    memories.forEach(m => {
+      (m.emotions || []).forEach(e => {
+        const key = e.trim();
+        if (key) emotionMap[key] = (emotionMap[key] || 0) + 1;
+      });
+    });
+    const topEmotions = Object.entries(emotionMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([emotion, count]) => ({ emotion, count }));
+
+    const now = new Date();
+    const memoriesByMonth = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const count = memories.filter(m => {
+        const d = new Date(m.createdAt);
+        return d >= monthStart && d <= monthEnd;
+      }).length;
+      memoriesByMonth.push({
+        month: monthStart.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        count,
+      });
+    }
+
+    // Most liked memory
+    const topMemory = memories.length
+      ? memories.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0))[0]
+      : null;
+
+    res.json({
+      success: true,
+      report: {
+        totalMemories,
+        totalLikes,
+        totalComments,
+        topEmotions,
+        memoriesByMonth,
+        topMemory: topMemory ? {
+          id: topMemory._id,
+          caption: topMemory.caption,
+          image: topMemory.image || null,
+          likesCount: topMemory.likes?.length || 0,
+        } : null,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

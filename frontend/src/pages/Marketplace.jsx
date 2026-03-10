@@ -155,7 +155,10 @@ const Marketplace = () => {
             style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-base font-bold text-white">Marketplace</h1>
+                <h1 className="text-base font-bold text-white flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-indigo-400" />
+                  Marketplace
+                </h1>
                 <p className="text-slate-600 text-xs mt-0.5">Discover and collect inspiring memories as NFTs</p>
               </div>
               {/* Search + filters inline */}

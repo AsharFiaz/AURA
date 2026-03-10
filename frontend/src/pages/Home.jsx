@@ -263,7 +263,7 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="max-w-[1340px] mx-auto flex">
+      <div className="mx-auto flex">
 
         {/* ── Left sidebar ─────────────────────────────────────────────────── */}
         {/* ── Left sidebar — collapsed (icons only) → expands on hover ────── */}
@@ -272,7 +272,6 @@ const Home = () => {
           style={{
             width: "72px",
             borderRight: "1px solid rgba(255,255,255,0.06)",
-            marginLeft: "0",
           }}
           onMouseEnter={e => { e.currentTarget.style.width = "240px"; }}
           onMouseLeave={e => { e.currentTarget.style.width = "72px"; }}
@@ -294,8 +293,8 @@ const Home = () => {
                 key={item.path}
                 onClick={() => go(item.path)}
                 className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${item.active
-                    ? "text-white bg-white/10"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                  ? "text-white bg-white/10"
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 style={{ minHeight: "48px", padding: "0 14px" }}
               >
@@ -354,10 +353,11 @@ const Home = () => {
         </aside>
 
         {/* ── Feed ──────────────────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0 border-r border-white/[0.06]">
+        <main className="flex-1 min-w-0">
           {/* Feed header */}
-          <div className="sticky top-0 z-40 px-6 py-3 flex items-center justify-between border-b border-white/[0.06]" style={{ background: "#0d0d1a" }}>
-            <h2 className="text-base font-bold text-white">
+          <div className="sticky top-0 z-40 px-6 py-3 flex items-center justify-between" style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <HomeIcon className="w-5 h-5 text-indigo-400" />
               {viewMode === "2d" ? "Home" : "Galaxy View"}
             </h2>
             <div className="flex items-center gap-1 p-1 rounded-xl border border-white/8" style={{ background: "#161628" }}>
@@ -511,7 +511,7 @@ const Home = () => {
             {["About", "Privacy", "Terms", "Help"].map(l => (
               <button key={l} className="hover:text-slate-500 transition-colors">{l}</button>
             ))}
-            <span className="w-full text-slate-800 mt-1">© 2024 AURA</span>
+            <span className="w-full text-slate-800 mt-1">© 2026 AURA</span>
           </div>
         </aside>
       </div>

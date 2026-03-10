@@ -109,45 +109,60 @@ router.post("/upload-video", auth, videoUpload.single("video"), async (req, res)
 });
 
 // ─── GET /api/memories/feed ───────────────────────────────────────────────────
-// Returns personality-ranked memories first, then fills with chronological.
+// Replace your existing /feed route with this one
 router.get("/feed", auth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const totalMemories = await Memory.countDocuments({ visibility: "public" });
+    const viewerId = req.user.id.toString();
 
-    // Fetch user personality to power recommendations
-    const user = await User.findById(req.user.id).select("personality").lean();
-    const p = user?.personality;
+    // Get viewer personality + find authors who have viewer in their followers
+    const [viewer, authorsWhoAllowViewer] = await Promise.all([
+      User.findById(viewerId).select("personality").lean(),
+      User.find({ followers: viewerId }).select("_id").lean(),
+    ]);
+
+    const allowedAuthorIds = authorsWhoAllowViewer.map(u => u._id.toString());
+
+    const p = viewer?.personality;
     const hasPersonality = p && Object.values(p).some(v => v !== null);
+
+    // Show a memory if:
+    // - visibility = 'public'  → everyone sees it
+    // - visibility = 'friends' → only if viewer is in the author's followers list
+    // - visibility = 'private' → only the author themselves (never shown to others)
+    const visibilityFilter = {
+      $or: [
+        { visibility: "public" },
+        { visibility: "friends", user: { $in: allowedAuthorIds } },
+        { visibility: "private", user: viewerId },  // only own private memories
+      ],
+    };
+
+    const totalMemories = await Memory.countDocuments(visibilityFilter);
 
     let orderedMemories;
 
     if (hasPersonality) {
-      // ── Personality-ranked path ──────────────────────────────────────────
       const recommendedIds = await getRecommendedMemoryIds(p);
 
-      // Fetch ALL public memories for this page window (broader fetch so we
-      // can re-order without making N queries)
-      const allPublic = await Memory.find({ visibility: "public" })
+      const allVisible = await Memory.find(visibilityFilter)
         .populate("user", "username email profilePicture")
         .populate("comments.user", "username email _id profilePicture")
         .sort({ createdAt: -1 })
         .lean();
 
-      // Split into recommended vs rest, preserving recommendation order
       const idSet = new Set(recommendedIds);
       const recommended = recommendedIds
-        .map(id => allPublic.find(m => m._id.toString() === id))
+        .map(id => allVisible.find(m => m._id.toString() === id))
         .filter(Boolean);
-      const rest = allPublic.filter(m => !idSet.has(m._id.toString()));
+      const rest = allVisible.filter(m => !idSet.has(m._id.toString()));
 
       orderedMemories = [...recommended, ...rest].slice(skip, skip + limit);
     } else {
-      // ── Fallback: plain chronological ────────────────────────────────────
-      orderedMemories = await Memory.find({ visibility: "public" })
+      orderedMemories = await Memory.find(visibilityFilter)
         .populate("user", "username email profilePicture")
         .populate("comments.user", "username email _id profilePicture")
         .sort({ createdAt: -1 })
@@ -267,18 +282,46 @@ router.post("/:id/comment", auth, async (req, res) => {
 });
 
 // ─── GET /api/memories/user/:userId ──────────────────────────────────────────
+// Replace your existing user/:userId route with this one
 router.get("/user/:userId", auth, async (req, res) => {
   try {
     const { userId } = req.params;
-    const isOwn = req.user.id.toString() === userId;
-    const query = isOwn ? { user: userId } : { user: userId, visibility: "public" };
+    const viewerId = req.user.id.toString();
+    const isOwn = viewerId === userId;
 
-    const memories = await Memory.find(query)
-      .populate("user", "username email")
+    let query;
+    if (isOwn) {
+      // Owner sees all their own memories including private
+      query = { user: userId };
+    } else {
+      // Check if viewer follows the author (viewer is in author's followers list)
+      const author = await User.findById(userId).select("followers").lean();
+      const isFollower = (author?.followers || []).map(id => id.toString()).includes(viewerId);
+
+      if (isFollower) {
+        // Followers see public + friends only, never private
+        query = { user: userId, visibility: { $in: ["public", "friends"] } };
+      } else {
+        // Strangers see public only
+        query = { user: userId, visibility: "public" };
+      }
+    }
+
+    const visibleMemories = await Memory.find(query)
+      .populate("user", "username email profilePicture")
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json({ success: true, memories: addLikesCount(memories) });
+    // Count private memories so frontend can show locked placeholders
+    const lockedCount = isOwn
+      ? 0
+      : await Memory.countDocuments({ user: userId, visibility: "private" });
+
+    res.json({
+      success: true,
+      memories: addLikesCount(visibleMemories),
+      lockedCount,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -294,6 +337,84 @@ router.delete("/:id", auth, async (req, res) => {
 
     await Memory.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: "Memory deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/memories/search?q=query ────────────────────────────────────────
+router.get("/search", auth, async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim() === "") {
+      return res.json({ success: true, memories: [] });
+    }
+
+    const raw = q.trim();
+
+    // Build $or conditions:
+    // 1. caption contains the raw query (handles keywords + hashtags)
+    // 2. user's username — resolved via a separate User lookup
+    const matchingUsers = await User.find({
+      username: { $regex: raw, $options: "i" },
+    }).select("_id").lean();
+
+    const userIds = matchingUsers.map(u => u._id);
+
+    const memories = await Memory.find({
+      visibility: "public",
+      $or: [
+        { caption: { $regex: raw, $options: "i" } },   // keyword + hashtag match
+        { emotions: { $regex: raw, $options: "i" } },  // emotion tag match
+        ...(userIds.length ? [{ user: { $in: userIds } }] : []),
+      ],
+    })
+      .populate("user", "username email profilePicture")
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean();
+
+    res.json({
+      success: true,
+      memories: memories.map(m => ({
+        ...m,
+        likesCount: m.likes?.length || 0,
+        image: m.image || null,
+        video: m.video || null,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── PATCH /api/memories/:id/ocean ───────────────────────────────────────────
+// Called by FastAPI after analysis to store the OCEAN vector on the memory.
+// No auth middleware — this is an internal service-to-service call protected
+// by a shared secret header instead.
+router.patch("/:id/ocean", async (req, res) => {
+  try {
+    // Verify internal secret so only FastAPI can call this
+    const secret = req.headers["x-internal-secret"];
+    if (secret !== process.env.INTERNAL_SECRET) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    const { O, C, E, A, N } = req.body;
+    if ([O, C, E, A, N].some(v => v === undefined)) {
+      return res.status(400).json({ success: false, message: "All 5 OCEAN scores required" });
+    }
+
+    const memory = await Memory.findByIdAndUpdate(
+      req.params.id,
+      { oceanVector: { O, C, E, A, N } },
+      { new: true }
+    );
+
+    if (!memory) return res.status(404).json({ success: false, message: "Memory not found" });
+
+    res.json({ success: true, oceanVector: memory.oceanVector });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

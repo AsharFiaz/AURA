@@ -14,7 +14,7 @@ const memorySchema = new mongoose.Schema({
     maxlength: [500, 'Caption cannot exceed 500 characters'],
   },
   image: { type: String, default: null },
-  video: { type: String, default: null }, // ← new field
+  video: { type: String, default: null },
   emotions: { type: [String], default: [] },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [commentSchema],
@@ -23,6 +23,14 @@ const memorySchema = new mongoose.Schema({
     type: String,
     enum: ['public', 'friends', 'private'],
     default: 'public',
+  },
+  // ── OCEAN vector derived from AI analysis of this memory ──────────────────
+  oceanVector: {
+    O: { type: Number, default: null },  // Openness
+    C: { type: Number, default: null },  // Conscientiousness
+    E: { type: Number, default: null },  // Extraversion
+    A: { type: Number, default: null },  // Agreeableness
+    N: { type: Number, default: null },  // Neuroticism
   },
 });
 

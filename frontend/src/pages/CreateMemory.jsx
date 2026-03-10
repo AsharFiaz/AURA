@@ -81,7 +81,7 @@ const Sidebar = ({ user, logout, navigate, location }) => {
 // ─── Visibility option ────────────────────────────────────────────────────────
 const VISIBILITY_OPTIONS = [
   { value: "public", icon: Globe, label: "Public", desc: "Everyone can see" },
-  { value: "friends", icon: Users, label: "Friends", desc: "Only followers" },
+  { value: "friends", icon: Users, label: "Followers Only", desc: "Only followers" },
   { value: "private", icon: Lock, label: "Private", desc: "Only you" },
 ];
 

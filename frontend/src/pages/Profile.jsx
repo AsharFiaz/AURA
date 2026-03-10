@@ -7,16 +7,61 @@ import { showError, showSuccess } from "../utils/toast";
 import { MemoryCardSkeleton } from "../components/common/LoadingSkeleton";
 import {
   Edit2, LogOut, Mail, User as UserIcon, Heart, Grid,
-  Sparkles, Trash2, Camera, X, Plus, Bell,
-  Home as HomeIcon, Compass, ShoppingBag, Bookmark,
+  Sparkles, Trash2, Camera, X, Plus, Bell, BarChart2,
+  Home as HomeIcon, Compass, ShoppingBag, Bookmark, Brain,
 } from "lucide-react";
 
 const TRAIT_INFO = {
-  O: { label: "Openness", color: "from-violet-500 to-purple-600", bg: "bg-violet-500/20 text-violet-300 border-violet-500/50" },
-  C: { label: "Conscientiousness", color: "from-blue-500 to-blue-600", bg: "bg-blue-500/20 text-blue-300 border-blue-500/50" },
-  E: { label: "Extraversion", color: "from-yellow-500 to-orange-500", bg: "bg-yellow-500/20 text-yellow-300 border-yellow-500/50" },
-  A: { label: "Agreeableness", color: "from-green-500 to-emerald-600", bg: "bg-green-500/20 text-green-300 border-green-500/50" },
-  N: { label: "Neuroticism", color: "from-red-500 to-pink-600", bg: "bg-red-500/20 text-red-300 border-red-500/50" },
+  O: { label: "Openness", short: "O", color: "#8b5cf6", track: "rgba(139,92,246,0.15)", desc: "Curiosity & creativity" },
+  C: { label: "Conscientiousness", short: "C", color: "#3b82f6", track: "rgba(59,130,246,0.15)", desc: "Discipline & planning" },
+  E: { label: "Extraversion", short: "E", color: "#f59e0b", track: "rgba(245,158,11,0.15)", desc: "Social energy & assertiveness" },
+  A: { label: "Agreeableness", short: "A", color: "#10b981", track: "rgba(16,185,129,0.15)", desc: "Empathy & cooperation" },
+  N: { label: "Neuroticism", short: "N", color: "#ef4444", track: "rgba(239,68,68,0.15)", desc: "Emotional sensitivity" },
+};
+
+// ─── Circular ring component ──────────────────────────────────────────────────
+const CircleRing = ({ score, traitKey, size = 88, strokeWidth = 7, animate: doAnimate = true }) => {
+  const trait = TRAIT_INFO[traitKey];
+  const pct = score !== null && score !== undefined ? Math.round(score * 100) : null;
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = pct !== null ? (pct / 100) * circ : 0;
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+          {/* Track */}
+          <circle cx={size / 2} cy={size / 2} r={r}
+            fill="none" stroke={trait.track} strokeWidth={strokeWidth} />
+          {/* Progress */}
+          {pct !== null && (
+            <motion.circle cx={size / 2} cy={size / 2} r={r}
+              fill="none" stroke={trait.color} strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              initial={{ strokeDashoffset: circ }}
+              animate={{ strokeDashoffset: doAnimate ? circ - dash : circ - dash }}
+              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+              style={{ strokeDashoffset: circ - dash }}
+            />
+          )}
+        </svg>
+        {/* Center text */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {pct !== null ? (
+            <span className="text-white font-bold" style={{ fontSize: size * 0.2 }}>{pct}%</span>
+          ) : (
+            <span className="text-slate-600" style={{ fontSize: size * 0.18 }}>—</span>
+          )}
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-white text-xs font-semibold">{trait.label}</p>
+        <p className="text-slate-600 text-[10px]">{trait.desc}</p>
+      </div>
+    </div>
+  );
 };
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -44,10 +89,8 @@ const Sidebar = ({ user, logout, navigate, location }) => {
       <nav className="flex flex-col gap-0.5 flex-1 px-2">
         {navLinks.map(item => (
           <button key={item.path} onClick={() => navigate(item.path)}
-            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"
-              }`}
-            style={{ minHeight: "48px", padding: "0 14px" }}
-          >
+            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+            style={{ minHeight: "48px", padding: "0 14px" }}>
             <item.icon className={`w-6 h-6 flex-shrink-0 transition-colors ${location.pathname === item.path ? "text-indigo-400" : "group-hover/item:text-indigo-400"}`} />
             <span className="ml-4 text-[15px] font-medium whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">{item.label}</span>
             {item.badge && <span className="absolute top-3 left-8 w-2 h-2 rounded-full bg-red-500" />}
@@ -93,7 +136,6 @@ const Profile = () => {
   const { user, token, logout, login, refreshUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
   const [editUsername, setEditUsername] = useState(user?.username || "");
 
   useEffect(() => {
@@ -112,7 +154,6 @@ const Profile = () => {
   };
 
   const handleLogout = () => { logout(); navigate("/login"); };
-
   const handleSaveChanges = async () => {
     setSaving(true);
     try {
@@ -121,7 +162,6 @@ const Profile = () => {
     } catch (e) { showError(e.response?.data?.message || "Failed to update profile"); }
     finally { setSaving(false); }
   };
-
   const handleCancel = () => { setEditUsername(user?.username || ""); setEditMode(false); };
 
   const handleProfilePictureUpload = async (e) => {
@@ -164,8 +204,16 @@ const Profile = () => {
     return new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
+  const hasPersonality = user?.personality && Object.values(user.personality).some(v => v !== null);
   const totalLikes = memories.reduce((sum, m) => sum + (m.likesCount || 0), 0);
+
   if (!user) return null;
+
+  const tabs = [
+    { id: "memories", icon: <Grid className="w-4 h-4" />, label: "My Memories" },
+    { id: "personality", icon: <Brain className="w-4 h-4" />, label: "Personality" },
+    { id: "about", icon: <UserIcon className="w-4 h-4" />, label: "About" },
+  ];
 
   return (
     <div className="min-h-screen text-white" style={{ background: "#0d0d1a" }}>
@@ -182,7 +230,6 @@ const Profile = () => {
       <div className="flex">
         <Sidebar user={user} logout={logout} navigate={navigate} location={location} />
 
-        {/* Main */}
         <main className="flex-1 min-w-0">
           {/* Page header */}
           <div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-between"
@@ -204,7 +251,6 @@ const Profile = () => {
               style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-
                 {/* Avatar */}
                 <div className="relative group flex-shrink-0">
                   <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg relative"
@@ -242,7 +288,6 @@ const Profile = () => {
                     </div>
                   )}
                 </div>
-
                 {/* Info */}
                 <div className="flex-1 text-center sm:text-left">
                   <h1 className="text-xl font-bold text-white mb-1">{user.username}</h1>
@@ -250,12 +295,20 @@ const Profile = () => {
                     <Mail className="w-3.5 h-3.5" /><span>{user.email}</span>
                   </div>
                   <p className="text-slate-600 text-xs mb-4">Member since {getMemberSince()}</p>
-                  <button onClick={() => setEditMode(!editMode)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-medium transition-all"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <Edit2 className="w-3.5 h-3.5" />
-                    {editMode ? "Cancel Edit" : "Edit Profile"}
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button onClick={() => setEditMode(!editMode)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-medium transition-all"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <Edit2 className="w-3.5 h-3.5" />
+                      {editMode ? "Cancel Edit" : "Edit Profile"}
+                    </button>
+                    <button onClick={() => navigate("/reports")}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-medium transition-all"
+                      style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}>
+                      <BarChart2 className="w-3.5 h-3.5 text-indigo-400" />
+                      My Report
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -318,13 +371,9 @@ const Profile = () => {
 
             {/* Tabs */}
             <div className="flex gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              {[
-                { id: "memories", icon: <Grid className="w-4 h-4" />, label: "My Memories" },
-                { id: "about", icon: <UserIcon className="w-4 h-4" />, label: "About" },
-              ].map(tab => (
+              {tabs.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? "text-indigo-400" : "text-slate-500 hover:text-white"
-                    }`}>
+                  className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? "text-indigo-400" : "text-slate-500 hover:text-white"}`}>
                   {tab.icon}{tab.label}
                   {activeTab === tab.id && (
                     <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-indigo-400" layoutId="profileTab" />
@@ -335,6 +384,8 @@ const Profile = () => {
 
             {/* Tab content */}
             <AnimatePresence mode="wait">
+
+              {/* ── Memories ── */}
               {activeTab === "memories" && (
                 <motion.div key="memories" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
                   {loading ? (
@@ -382,46 +433,107 @@ const Profile = () => {
                 </motion.div>
               )}
 
+              {/* ── Personality tab ── */}
+              {activeTab === "personality" && (
+                <motion.div key="personality" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
+                  {hasPersonality ? (
+                    <div className="rounded-2xl p-6"
+                      style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-white font-bold text-sm">OCEAN Personality</h3>
+                          <p className="text-slate-600 text-xs mt-0.5">Derived from your memories by AI</p>
+                        </div>
+                        <motion.button
+                          onClick={() => navigate("/personality")}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+                          style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 16px rgba(79,70,229,0.3)" }}
+                          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                          <Brain className="w-3.5 h-3.5" /> Full Report
+                        </motion.button>
+                      </div>
+
+                      {/* Rings grid */}
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-6 justify-items-center">
+                        {Object.keys(TRAIT_INFO).map(key => (
+                          <CircleRing key={key} traitKey={key} score={user.personality[key]} />
+                        ))}
+                      </div>
+
+                      {/* Dominant trait callout */}
+                      {(() => {
+                        const entries = Object.entries(user.personality).filter(([, v]) => v !== null);
+                        if (!entries.length) return null;
+                        const [topKey] = entries.sort((a, b) => b[1] - a[1])[0];
+                        const trait = TRAIT_INFO[topKey];
+                        return (
+                          <motion.div className="mt-6 px-4 py-3 rounded-xl flex items-center gap-3"
+                            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                              style={{ background: `${trait.color}22`, border: `1px solid ${trait.color}44` }}>
+                              <Sparkles className="w-4 h-4" style={{ color: trait.color }} />
+                            </div>
+                            <div>
+                              <p className="text-white text-xs font-semibold">
+                                Dominant trait — {trait.label}
+                              </p>
+                              <p className="text-slate-600 text-xs">{trait.desc}</p>
+                            </div>
+                          </motion.div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 rounded-2xl"
+                      style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <Brain className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+                      <p className="text-white font-semibold mb-1">No personality data yet</p>
+                      <p className="text-slate-600 text-sm mb-5">Take the quiz or create more memories so AI can build your profile</p>
+                      <button onClick={() => navigate("/onboarding")}
+                        className="px-5 py-2 rounded-xl text-white text-sm font-medium"
+                        style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                        Take the Quiz
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ── About ── */}
               {activeTab === "about" && (
                 <motion.div key="about" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
                   <div className="rounded-2xl p-6" style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
-                    <h3 className="text-sm font-bold text-white mb-5">Personality Profile</h3>
-                    {user.personality && Object.values(user.personality).some(v => v !== null) ? (
-                      <div className="space-y-4">
-                        {Object.entries(TRAIT_INFO).map(([key, trait]) => {
-                          const score = user.personality[key];
-                          if (score === null || score === undefined) return null;
-                          const pct = Math.round(score * 100);
-                          return (
-                            <div key={key}>
-                              <div className="flex justify-between items-center mb-1.5">
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${trait.bg}`}>
-                                  {key} · {trait.label}
-                                </span>
-                                <span className="text-white font-semibold text-xs">{pct}%</span>
-                              </div>
-                              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                                <motion.div className={`h-full rounded-full bg-gradient-to-r ${trait.color}`}
-                                  initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                                  transition={{ duration: 0.8, delay: 0.1 }} />
-                              </div>
-                            </div>
-                          );
-                        })}
+                    <h3 className="text-sm font-bold text-white mb-4">Account Info</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2"
+                        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <span className="text-slate-500 text-xs">Username</span>
+                        <span className="text-white text-xs font-medium">{user.username}</span>
                       </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-slate-600 text-sm mb-3">No personality profile yet</p>
-                        <button onClick={() => navigate("/onboarding")}
-                          className="px-4 py-2 rounded-xl text-white text-xs font-medium"
-                          style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
-                          Take the Quiz
-                        </button>
+                      <div className="flex items-center justify-between py-2"
+                        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <span className="text-slate-500 text-xs">Email</span>
+                        <span className="text-white text-xs font-medium">{user.email}</span>
                       </div>
-                    )}
+                      <div className="flex items-center justify-between py-2"
+                        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <span className="text-slate-500 text-xs">Member Since</span>
+                        <span className="text-white text-xs font-medium">{getMemberSince()}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-slate-500 text-xs">Role</span>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{ background: "rgba(99,102,241,0.15)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)" }}>
+                          {user.role || "user"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
+
             </AnimatePresence>
           </div>
         </main>
