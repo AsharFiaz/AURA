@@ -54,7 +54,10 @@ function AdminRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  return user ? <Navigate to="/" replace /> : children;
+  if (user) {
+    return user.role === "admin" ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/" replace />;
+  }
+  return children;
 }
 
 function App() {

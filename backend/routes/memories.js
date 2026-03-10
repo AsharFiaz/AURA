@@ -389,4 +389,35 @@ router.get("/search", auth, async (req, res) => {
   }
 });
 
+// ─── PATCH /api/memories/:id/ocean ───────────────────────────────────────────
+// Called by FastAPI after analysis to store the OCEAN vector on the memory.
+// No auth middleware — this is an internal service-to-service call protected
+// by a shared secret header instead.
+router.patch("/:id/ocean", async (req, res) => {
+  try {
+    // Verify internal secret so only FastAPI can call this
+    const secret = req.headers["x-internal-secret"];
+    if (secret !== process.env.INTERNAL_SECRET) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    const { O, C, E, A, N } = req.body;
+    if ([O, C, E, A, N].some(v => v === undefined)) {
+      return res.status(400).json({ success: false, message: "All 5 OCEAN scores required" });
+    }
+
+    const memory = await Memory.findByIdAndUpdate(
+      req.params.id,
+      { oceanVector: { O, C, E, A, N } },
+      { new: true }
+    );
+
+    if (!memory) return res.status(404).json({ success: false, message: "Memory not found" });
+
+    res.json({ success: true, oceanVector: memory.oceanVector });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

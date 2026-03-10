@@ -294,8 +294,8 @@ const Home = () => {
                 key={item.path}
                 onClick={() => go(item.path)}
                 className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${item.active
-                    ? "text-white bg-white/10"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                  ? "text-white bg-white/10"
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 style={{ minHeight: "48px", padding: "0 14px" }}
               >
@@ -511,7 +511,7 @@ const Home = () => {
             {["About", "Privacy", "Terms", "Help"].map(l => (
               <button key={l} className="hover:text-slate-500 transition-colors">{l}</button>
             ))}
-            <span className="w-full text-slate-800 mt-1">© 2024 AURA</span>
+            <span className="w-full text-slate-800 mt-1">© 2026 AURA</span>
           </div>
         </aside>
       </div>

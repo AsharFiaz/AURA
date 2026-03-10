@@ -60,7 +60,7 @@ const Login = () => {
       if (response.data.success) {
         const userData = {
           ...response.data.user,
-          role: response.data.user.role || response.data.user.isAdmin ? "admin" : "user",
+          role: response.data.user.role === "admin" || response.data.user.isAdmin ? "admin" : "user",
         };
         login(response.data.token, userData);
         if (userData.role === "admin" || userData.isAdmin) navigate("/admin/dashboard");
