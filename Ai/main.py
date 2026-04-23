@@ -1,5 +1,5 @@
 import os
-import httpx   # add to requirements.txt if not present
+import httpx   
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np

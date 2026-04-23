@@ -75,6 +75,28 @@ AURA/
     └── SRS.md
 ```
 
+How to Run the Project
+Step 1 — Activate the virtual environment (always do this first, every time):
+bashcd /Users/asharfiaz/Desktop/AURA
+source .venv/bin/activate
+# you should see (.venv) at the start of your terminal prompt
+Step 2 — Open 3 terminal tabs/windows and activate the venv in each one:
+bash# in each new terminal tab run:
+cd /Users/asharfiaz/Desktop/AURA
+source .venv/bin/activate
+Step 3 — Terminal 1: Start the AI service
+bashcd /Users/asharfiaz/Desktop/AURA/Ai
+uvicorn main:app --reload --port 8000
+Verify it's running: http://localhost:8000/health should return {"status":"ok"}
+Step 4 — Terminal 2: Start the Node.js backend
+bashcd /Users/asharfiaz/Desktop/AURA/backend
+node server.js
+Verify it's running: http://localhost:5001/api/test should return {"message":"AURA Backend is running"}
+Step 5 — Terminal 3: Start the React frontend
+bashcd /Users/asharfiaz/Desktop/AURA/frontend
+npm start
+App opens automatically at http://localhost:3000
+
 ##  Team
 
 - Jazib Waqar (CIIT/FA22-BCS-035/ISB)

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+cloudinary
+qdrant-client
+google-genai
+pillow
+numpy
+httpx
