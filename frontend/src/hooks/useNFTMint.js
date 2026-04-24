@@ -52,6 +52,16 @@ export const useNFTMint = () => {
 
             const tokenId = event ? Number(event.args.tokenId) : null;
             setMintedId(tokenId);
+
+            // Save tokenId to MongoDB
+            try {
+                await fetch(`${process.env.REACT_APP_API_URL}/memories/${mongoId}/nft`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+                    body: JSON.stringify({ tokenId, txHash: tx.hash }),
+                });
+            } catch (e) { console.error("Failed to save NFT to DB:", e); }
+
             return { tokenId, txHash: tx.hash };
         } catch (err) {
             if (err.code === 4001) setError("Transaction rejected in MetaMask.");

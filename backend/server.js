@@ -73,6 +73,7 @@ app.use(passport.session());
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/memories", require("./routes/memories"));
+app.use("/api/memories", require("./routes/nft"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/follow", require("./routes/follow"));
 app.use("/api/admin", require("./routes/admin"));

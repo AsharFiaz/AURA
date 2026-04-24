@@ -96,6 +96,12 @@ Step 5 — Terminal 3: Start the React frontend
 bashcd /Users/asharfiaz/Desktop/AURA/frontend
 npm start
 App opens automatically at http://localhost:3000
+And make sure when you start that session to:
+
+Run npx hardhat node in Terminal 1
+Run npx hardhat run scripts/deploy.js --network localhost in Terminal 2
+Reset MetaMask account (Settings → Advanced → Reset Account)
+Update CONTRACT_ADDRESS in blockchain.js if the address changed
 
 ##  Team
 
