@@ -19,26 +19,21 @@ const memorySchema = new mongoose.Schema({
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [commentSchema],
   createdAt: { type: Date, default: Date.now },
-  visibility: {
-    type: String,
-    enum: ['public', 'friends', 'private'],
-    default: 'public',
-  },
-  // ── OCEAN vector derived from AI analysis of this memory ──────────────────
+  visibility: { type: String, enum: ['public', 'friends', 'private'], default: 'public' },
   oceanVector: {
-    O: { type: Number, default: null },  // Openness
-    C: { type: Number, default: null },  // Conscientiousness
-    E: { type: Number, default: null },  // Extraversion
-    A: { type: Number, default: null },  // Agreeableness
-    N: { type: Number, default: null },  // Neuroticism
+    O: { type: Number, default: null },
+    C: { type: Number, default: null },
+    E: { type: Number, default: null },
+    A: { type: Number, default: null },
+    N: { type: Number, default: null },
   },
+  // ── NFT fields ─────────────────────────────────────────────────────────────
+  nftTokenId: { type: Number, default: null },
+  nftTxHash: { type: String, default: null },
+  nftMintedAt: { type: Date, default: null },
 });
 
-memorySchema.virtual('likesCount').get(function () {
-  return this.likes.length;
-});
-
+memorySchema.virtual('likesCount').get(function () { return this.likes.length; });
 memorySchema.set('toJSON', { virtuals: true });
 
-const Memory = mongoose.model('Memory', memorySchema);
-module.exports = Memory;
+module.exports = mongoose.model('Memory', memorySchema);

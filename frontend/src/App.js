@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { WalletProvider } from "./context/WalletContext";
+import WalletTestPage from "./pages/WalletTestPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AuthCallback from "./pages/AuthCallback";
@@ -62,74 +64,77 @@ function PublicRoute({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <Toaster
-        position="bottom-right"
-        containerStyle={{ bottom: 80 }}
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: "#1f2937",
-            color: "#ffffff",
-            borderRadius: "12px",
-            padding: "12px 16px",
-            fontWeight: "500",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-          },
-          success: {
-            iconTheme: { primary: "#ffffff", secondary: "#7c3aed" },
-            style: {
-              background: "linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)",
-              color: "#ffffff",
-              boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
-            },
-          },
-          error: {
-            iconTheme: { primary: "#f87171", secondary: "#1f2937" },
+    <WalletProvider>
+      <AuthProvider>
+        <Toaster
+          position="bottom-right"
+          containerStyle={{ bottom: 80 }}
+          toastOptions={{
+            duration: 3000,
             style: {
               background: "#1f2937",
-              color: "#f87171",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
+              color: "#ffffff",
+              borderRadius: "12px",
+              padding: "12px 16px",
+              fontWeight: "500",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
             },
-          },
-        }}
-      />
-      <BrowserRouter>
-        <Routes>
-          {/* Public — redirect away if already logged in */}
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+            success: {
+              iconTheme: { primary: "#ffffff", secondary: "#7c3aed" },
+              style: {
+                background: "linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)",
+                color: "#ffffff",
+                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
+              },
+            },
+            error: {
+              iconTheme: { primary: "#f87171", secondary: "#1f2937" },
+              style: {
+                background: "#1f2937",
+                color: "#f87171",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
+              },
+            },
+          }}
+        />
+        <BrowserRouter>
+          <Routes>
+            {/* Public — redirect away if already logged in */}
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
-          {/* OAuth callback — no guard needed */}
-          <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* OAuth callback — no guard needed */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
-          {/* Protected */}
-          <Route path="/onboarding" element={<ProtectedRoute><PersonalityOnboarding /></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/create" element={<ProtectedRoute><CreateMemory /></ProtectedRoute>} />
-          <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
-          <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-          <Route path="/search" element={<ProtectedRoute><SearchUsers /></ProtectedRoute>} />
-          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-          <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
-          <Route path="/personality" element={<ProtectedRoute><PersonalityPage /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            {/* Protected */}
+            <Route path="/onboarding" element={<ProtectedRoute><PersonalityOnboarding /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/create" element={<ProtectedRoute><CreateMemory /></ProtectedRoute>} />
+            <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+            <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><SearchUsers /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+            <Route path="/personality" element={<ProtectedRoute><PersonalityPage /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            <Route path="/wallet-test" element={<WalletTestPage />} />
 
-          {/* Admin */}
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AllUsers /></AdminRoute>} />
-          <Route path="/admin/memories" element={<AdminRoute><AllMemories /></AdminRoute>} />
-          <Route path="/admin/nfts" element={<AdminRoute><AllNFTs /></AdminRoute>} />
-          <Route path="/admin/likes" element={<AdminRoute><LikesAnalytics /></AdminRoute>} />
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Admin */}
+            <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AllUsers /></AdminRoute>} />
+            <Route path="/admin/memories" element={<AdminRoute><AllMemories /></AdminRoute>} />
+            <Route path="/admin/nfts" element={<AdminRoute><AllNFTs /></AdminRoute>} />
+            <Route path="/admin/likes" element={<AdminRoute><LikesAnalytics /></AdminRoute>} />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </WalletProvider>
   );
 }
 

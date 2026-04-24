@@ -1,0 +1,19 @@
+{
+    "name": "aura-blockchain",
+    "version": "1.0.0",
+    "description": "AURA NFT smart contracts",
+    "scripts": {
+        "compile": "hardhat compile",
+        "deploy:amoy": "hardhat run scripts/deploy.js --network amoy",
+        "deploy:mumbai": "hardhat run scripts/deploy.js --network mumbai",
+        "test": "hardhat test"
+    },
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+        "hardhat": "^2.19.0"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.9.0",
+        "dotenv": "^16.0.0"
+    }
+}
