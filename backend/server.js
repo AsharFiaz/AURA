@@ -3,26 +3,21 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const session = require("express-session");
 const passport = require("passport");
+const cron = require("node-cron");
 const connectDB = require("./config/db");
-require("./config/passport"); // Initialize passport configuration
+require("./config/passport");
 
-// Load env variables
 dotenv.config();
 
-// Initialize express
 const app = express();
-
-// Connect to MongoDB
 connectDB();
 
-// Middleware
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       process.env.FRONTEND_URL,
-      // Regex to allow local network IP addresses for mobile testing
       /http:\/\/192\.168\.\d+\.\d+:\d+/
     ].filter(Boolean),
     credentials: true,
@@ -31,10 +26,8 @@ app.use(
   })
 );
 
-// Explicitly handle preflight requests for all routes
 app.options(/\/.*/, cors());
 
-// Add explicit headers to every response as a fallback
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && (
@@ -50,23 +43,24 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
   next();
 });
-app.use(express.json());
 
-// Session middleware (must be before passport)
+// sendBeacon sends with content-type "text/plain;charset=UTF-8".
+// Accept that as JSON too so the unload-flush path works.
+app.use(express.json({ type: ['application/json', 'text/plain'] }));
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "aura_session_secret_random_key_2024",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 24 * 60 * 60 * 1000,
     },
   })
 );
 
-// Initialize passport
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -77,15 +71,27 @@ app.use("/api/memories", require("./routes/nft"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/follow", require("./routes/follow"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/interactions", require("./routes/interactions"));
 
-// Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "AURA Backend is running", success: true });
 });
 
+// ── Daily vector update cron ────────────────────────────────────────────────
+// Runs every day at 03:00 server time. Recomputes personality vectors for
+// every user with pending (unapplied) interactions.
+const { updateAllPendingUsers } = require('./services/vectorUpdate');
+cron.schedule('0 3 * * *', async () => {
+  console.log('[cron] Starting daily vector update at', new Date().toISOString());
+  try {
+    await updateAllPendingUsers();
+  } catch (err) {
+    console.error('[cron] daily update failed:', err.message);
+  }
+}, { timezone: process.env.CRON_TIMEZONE || 'UTC' });
 
-// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('[cron] Daily vector update scheduled for 03:00');
 });
