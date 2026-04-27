@@ -1,91 +1,25 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import { showInfo } from "../utils/toast";
+import AnimatedBackdrop from "../components/common/AnimatedBackdrop";
+import BombasticSidebar from "../components/common/BombasticSidebar";
+import CommandBar from "../components/common/CommandBar";
+import MobileTopBar from "../components/common/MobileTopBar";
+import MobileBottomNav from "../components/common/MobileBottomNav";
 import {
   ImagePlus, Video, Sparkles, ArrowLeft, CheckCircle2, X,
-  Home as HomeIcon, Compass, ShoppingBag, Mail, Bell,
-  Bookmark, User, Plus, LogOut, Globe, Lock, Users,
+  Globe, Lock, Users, Plus,
 } from "lucide-react";
 
-// ─── Sidebar (same collapsed/expand as Home) ──────────────────────────────────
-const Sidebar = ({ user, logout, navigate, location }) => {
-  const navLinks = [
-    { icon: HomeIcon, label: "Home", path: "/" },
-    { icon: Compass, label: "Discover", path: "/discover" },
-    { icon: ShoppingBag, label: "Marketplace", path: "/marketplace" },
-    { icon: Mail, label: "Messages", path: "/messages" },
-    { icon: Bell, label: "Notifications", path: "/notifications", badge: true },
-    { icon: Bookmark, label: "Bookmarks", path: "/bookmarks" },
-    { icon: User, label: "Profile", path: "/profile" },
-  ];
-
-  return (
-    <aside
-      className="hidden lg:flex flex-col flex-shrink-0 sticky top-0 h-screen overflow-hidden transition-all duration-300 ease-in-out group/sidebar"
-      style={{ width: "72px", borderRight: "1px solid rgba(255,255,255,0.06)" }}
-      onMouseEnter={e => { e.currentTarget.style.width = "240px"; }}
-      onMouseLeave={e => { e.currentTarget.style.width = "72px"; }}
-    >
-      {/* Logo */}
-      <div className="px-4 py-6 flex items-center overflow-hidden" style={{ minHeight: "72px" }}>
-        <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent flex-shrink-0 w-8 text-center">A</span>
-        <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-100">URA</span>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex flex-col gap-0.5 flex-1 px-2">
-        {navLinks.map(item => (
-          <button key={item.path} onClick={() => navigate(item.path)}
-            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"
-              }`}
-            style={{ minHeight: "48px", padding: "0 14px" }}
-          >
-            <item.icon className={`w-6 h-6 flex-shrink-0 transition-colors ${location.pathname === item.path ? "text-indigo-400" : "group-hover/item:text-indigo-400"}`} />
-            <span className="ml-4 text-[15px] font-medium whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">{item.label}</span>
-            {item.badge && <span className="absolute top-3 left-8 w-2 h-2 rounded-full bg-red-500" />}
-          </button>
-        ))}
-      </nav>
-
-      {/* Create — active state */}
-      <div className="px-2 mt-2">
-        <button className="w-full flex items-center text-white font-semibold rounded-xl transition-all text-sm shadow-lg overflow-hidden ring-2 ring-indigo-400"
-          style={{ minHeight: "44px", padding: "0 14px", background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
-          <Plus className="w-5 h-5 flex-shrink-0" />
-          <span className="ml-4 whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75">Create Memory</span>
-        </button>
-      </div>
-
-      {/* User */}
-      <div className="mx-2 mt-3 mb-4 flex items-center rounded-xl hover:bg-white/5 transition-colors cursor-pointer group/user overflow-hidden"
-        style={{ minHeight: "56px", padding: "0 10px" }} onClick={() => navigate("/profile")}>
-        <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-          {user?.profilePicture ? <img src={user.profilePicture} alt="" className="w-full h-full object-cover" /> : (user?.username?.charAt(0).toUpperCase() || "U")}
-        </div>
-        <div className="ml-3 flex-1 min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75">
-          <p className="text-white text-xs font-semibold truncate">{user?.username}</p>
-          <p className="text-slate-600 text-xs truncate">{user?.email}</p>
-        </div>
-        <button onClick={e => { e.stopPropagation(); logout(); navigate("/login"); }}
-          className="ml-2 p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors flex-shrink-0 opacity-0 group-hover/sidebar:opacity-100 group-hover/user:opacity-100">
-          <LogOut className="w-4 h-4" />
-        </button>
-      </div>
-    </aside>
-  );
-};
-
-// ─── Visibility option ────────────────────────────────────────────────────────
 const VISIBILITY_OPTIONS = [
   { value: "public", icon: Globe, label: "Public", desc: "Everyone can see" },
   { value: "friends", icon: Users, label: "Followers Only", desc: "Only followers" },
   { value: "private", icon: Lock, label: "Private", desc: "Only you" },
 ];
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 const CreateMemory = () => {
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState("public");
@@ -99,9 +33,8 @@ const CreateMemory = () => {
   const [videoPreview, setVideoPreview] = useState(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     return () => {
@@ -162,20 +95,49 @@ const CreateMemory = () => {
     } finally { setLoading(false); setUploadingMedia(false); }
   };
 
-  // ── Success screen ──────────────────────────────────────────────────────────
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0d0d1a" }}>
-        <motion.div className="text-center" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", duration: 0.5 }}>
+      <div className="min-h-screen flex items-center justify-center relative">
+        <AnimatedBackdrop />
+        <motion.div className="text-center relative" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", duration: 0.5 }}>
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="mb-5 flex justify-center">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(74,222,128,0.1)", border: "2px solid rgba(74,222,128,0.3)" }}>
-              <CheckCircle2 className="w-10 h-10 text-green-400" />
-            </div>
+            <motion.div
+              className="w-24 h-24 rounded-full flex items-center justify-center relative"
+              style={{ background: "rgba(74,222,128,0.1)", border: "2px solid rgba(74,222,128,0.3)" }}
+              animate={{
+                boxShadow: [
+                  "0 0 32px rgba(74,222,128,0.3)",
+                  "0 0 64px rgba(74,222,128,0.6)",
+                  "0 0 32px rgba(74,222,128,0.3)",
+                ],
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <CheckCircle2 className="w-12 h-12 text-green-400" />
+              {/* Burst sparkles */}
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute"
+                  style={{
+                    left: "50%",
+                    top: "50%",
+                    transform: `rotate(${i * 45}deg) translateY(-60px)`,
+                  }}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: [0, 1, 0], scale: [0, 1.5, 0] }}
+                  transition={{ duration: 1.5, delay: 0.3 + i * 0.1, repeat: Infinity, repeatDelay: 1 }}
+                >
+                  <Sparkles className="w-3 h-3 text-yellow-400" />
+                </motion.div>
+              ))}
+            </motion.div>
           </motion.div>
-          <motion.h2 className="text-2xl font-bold text-white mb-2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <motion.h2 className="text-3xl font-bold bg-gradient-to-r from-white via-green-200 to-green-400 bg-clip-text text-transparent mb-2"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             Memory Created!
           </motion.h2>
-          <motion.p className="text-slate-500 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+          <motion.p className="text-slate-400 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
             Redirecting to home…
           </motion.p>
         </motion.div>
@@ -186,79 +148,118 @@ const CreateMemory = () => {
   const canPublish = !loading && !uploadingMedia && caption.trim();
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#0d0d1a" }}>
+    <div className="min-h-screen text-white relative">
+      <AnimatedBackdrop />
 
-      {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-50 flex items-center gap-3 px-4 py-3"
-        style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <span className="text-lg font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-          Create Memory
-        </span>
-      </div>
+      <CommandBar isLive={true} />
+      <MobileTopBar title="Create Memory" icon={Plus} />
 
-      <div className="flex">
-        <Sidebar user={user} logout={logout} navigate={navigate} location={location} />
+      <div className="flex relative">
+        <BombasticSidebar />
 
-        {/* ── Main content ───────────────────────────────────────────────────── */}
         <main className="flex-1 min-w-0">
           {/* Desktop header */}
-          <div className="hidden lg:flex items-center gap-3 px-6 py-4 sticky top-0 z-40"
-            style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-            <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+          <motion.div
+            className="hidden lg:flex items-center gap-3 px-6 py-4 sticky top-[42px] z-40"
+            style={{
+              background: "rgba(10,10,20,0.85)",
+              backdropFilter: "blur(20px)",
+              borderBottom: "1px solid rgba(167,139,250,0.1)",
+            }}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.button onClick={() => navigate(-1)}
+              className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
+              whileHover={{ x: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-base font-bold text-white">Create Memory</h1>
-          </div>
+            </motion.button>
+            <h1 className="text-base font-bold bg-gradient-to-r from-white via-indigo-200 to-violet-300 bg-clip-text text-transparent flex items-center gap-2">
+              <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+                <Sparkles className="w-5 h-5 text-indigo-400" />
+              </motion.div>
+              Create Memory
+            </h1>
+          </motion.div>
 
           <div className="max-w-2xl mx-auto px-4 lg:px-6 py-6 pb-24 lg:pb-8">
-            <motion.div className="rounded-2xl p-6" style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div
+              className="rounded-3xl p-6 relative overflow-hidden"
+              style={{
+                background: "rgba(19,19,42,0.7)",
+                backdropFilter: "blur(20px)",
+                border: "1px solid rgba(167,139,250,0.15)",
+                boxShadow: "0 0 40px rgba(124,58,237,0.1)",
+              }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              {/* Animated edge shimmer */}
+              <motion.div
+                className="absolute inset-0 opacity-0 pointer-events-none"
+                style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.08), transparent)" }}
+                animate={{ x: ["-100%", "100%"], opacity: [0, 0.5, 0] }}
+                transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+              />
 
-              {/* User row */}
-              <div className="flex items-center gap-3 mb-5 pb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+              <div className="flex items-center gap-3 mb-5 pb-5 relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <motion.div
+                  className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold flex-shrink-0"
+                  whileHover={{ scale: 1.1, boxShadow: "0 0 20px rgba(167,139,250,0.5)" }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
                   {user?.profilePicture ? <img src={user.profilePicture} alt="" className="w-full h-full object-cover" /> : (user?.username?.charAt(0).toUpperCase() || "U")}
-                </div>
+                </motion.div>
                 <div>
                   <p className="text-white text-sm font-semibold">{user?.username || "You"}</p>
-                  <p className="text-slate-600 text-xs">Sharing a new memory</p>
+                  <p className="text-slate-500 text-xs">Sharing a new memory</p>
                 </div>
               </div>
 
-              {/* Caption */}
-              <div className="mb-5">
+              <div className="mb-5 relative">
                 <textarea
                   value={caption}
                   onChange={e => { setCaption(e.target.value); setError(""); }}
-                  placeholder="What's on your mind? Share your inspiring moment…"
+                  placeholder="What's resonating with you today? Share your moment…"
                   className="w-full text-white placeholder-slate-600 text-sm leading-relaxed focus:outline-none resize-none bg-transparent"
                   rows={4}
                   maxLength={500}
                 />
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-slate-700 text-xs">{caption.length}/500</span>
-                  <button onClick={() => showInfo("AI feature coming soon! ✨")}
-                    className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-indigo-500/10">
-                    <Sparkles className="w-3.5 h-3.5" /> AI Suggest
-                  </button>
+                  <motion.button
+                    onClick={() => showInfo("AI feature coming soon! ✨")}
+                    className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1.5 rounded-lg"
+                    style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}
+                    whileHover={{ scale: 1.05, borderColor: "rgba(99,102,241,0.4)" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }}>
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </motion.div>
+                    AI Suggest
+                  </motion.button>
                 </div>
               </div>
 
-              {/* Media uploads */}
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                {/* Image */}
+              <div className="grid grid-cols-2 gap-3 mb-5 relative">
                 <div>
                   {imagePreview ? (
-                    <motion.div className="relative rounded-xl overflow-hidden h-36" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                    <motion.div className="relative rounded-xl overflow-hidden h-36"
+                      initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                       <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                      <button onClick={handleRemoveImage}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-white transition-colors"
-                        style={{ background: "rgba(0,0,0,0.7)" }}>
+                      <motion.button onClick={handleRemoveImage}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-white"
+                        style={{ background: "rgba(0,0,0,0.7)" }}
+                        whileHover={{ scale: 1.1, background: "rgba(239,68,68,0.8)" }}
+                        whileTap={{ scale: 0.9 }}
+                      >
                         <X className="w-3.5 h-3.5" />
-                      </button>
+                      </motion.button>
                       <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs text-white font-medium"
                         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)" }}>
                         Photo added
@@ -267,31 +268,44 @@ const CreateMemory = () => {
                   ) : (
                     <>
                       <input type="file" accept="image/jpeg,image/jpg,image/png,image/gif" onChange={handleImageSelect} className="hidden" id="image-upload" />
-                      <label htmlFor="image-upload" className="flex flex-col items-center justify-center h-36 rounded-xl cursor-pointer transition-all group/img"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)" }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(99,102,241,0.4)"}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                      <motion.label htmlFor="image-upload"
+                        className="flex flex-col items-center justify-center h-36 rounded-xl cursor-pointer transition-all"
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(99,102,241,0.3)" }}
+                        whileHover={{
+                          background: "rgba(99,102,241,0.08)",
+                          borderColor: "rgba(99,102,241,0.6)",
+                          scale: 1.02,
+                        }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: "rgba(99,102,241,0.1)" }}>
+                        <motion.div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center mb-2"
+                          style={{ background: "rgba(99,102,241,0.15)" }}
+                          animate={{ y: [0, -3, 0] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
                           <ImagePlus className="w-5 h-5 text-indigo-400" />
-                        </div>
+                        </motion.div>
                         <p className="text-slate-400 text-xs font-medium">Add Photo</p>
                         <p className="text-slate-600 text-[10px] mt-0.5">JPG, PNG, GIF · 5MB</p>
-                      </label>
+                      </motion.label>
                     </>
                   )}
                 </div>
 
-                {/* Video */}
                 <div>
                   {videoPreview ? (
-                    <motion.div className="relative rounded-xl overflow-hidden h-36" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                    <motion.div className="relative rounded-xl overflow-hidden h-36"
+                      initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                       <video src={videoPreview} className="w-full h-full object-cover" />
-                      <button onClick={handleRemoveVideo}
+                      <motion.button onClick={handleRemoveVideo}
                         className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-white"
-                        style={{ background: "rgba(0,0,0,0.7)" }}>
+                        style={{ background: "rgba(0,0,0,0.7)" }}
+                        whileHover={{ scale: 1.1, background: "rgba(239,68,68,0.8)" }}
+                        whileTap={{ scale: 0.9 }}
+                      >
                         <X className="w-3.5 h-3.5" />
-                      </button>
+                      </motion.button>
                       <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs text-white font-medium"
                         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)" }}>
                         Video added
@@ -300,27 +314,36 @@ const CreateMemory = () => {
                   ) : (
                     <>
                       <input type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime" onChange={handleVideoSelect} className="hidden" id="video-upload" />
-                      <label htmlFor="video-upload" className="flex flex-col items-center justify-center h-36 rounded-xl cursor-pointer transition-all"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)" }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(139,92,246,0.4)"}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                      <motion.label htmlFor="video-upload"
+                        className="flex flex-col items-center justify-center h-36 rounded-xl cursor-pointer transition-all"
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(139,92,246,0.3)" }}
+                        whileHover={{
+                          background: "rgba(139,92,246,0.08)",
+                          borderColor: "rgba(139,92,246,0.6)",
+                          scale: 1.02,
+                        }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: "rgba(139,92,246,0.1)" }}>
+                        <motion.div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center mb-2"
+                          style={{ background: "rgba(139,92,246,0.15)" }}
+                          animate={{ y: [0, -3, 0] }}
+                          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                        >
                           <Video className="w-5 h-5 text-violet-400" />
-                        </div>
+                        </motion.div>
                         <p className="text-slate-400 text-xs font-medium">Add Video</p>
                         <p className="text-slate-600 text-[10px] mt-0.5">MP4, WebM, MOV · 50MB</p>
-                      </label>
+                      </motion.label>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* Upload progress */}
               <AnimatePresence>
                 {uploadingMedia && (
-                  <motion.div className="flex items-center gap-2.5 mb-4 px-4 py-3 rounded-xl text-indigo-300 text-sm"
-                    style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}
+                  <motion.div className="flex items-center gap-2.5 mb-4 px-4 py-3 rounded-xl text-indigo-300 text-sm relative"
+                    style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}
                     initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                     <motion.div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full flex-shrink-0"
                       animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
@@ -329,29 +352,32 @@ const CreateMemory = () => {
                 )}
               </AnimatePresence>
 
-              {/* Visibility selector */}
-              <div className="mb-5">
-                <p className="text-slate-500 text-xs font-medium mb-2 uppercase tracking-wide">Visibility</p>
+              <div className="mb-5 relative">
+                <p className="text-slate-500 text-xs font-medium mb-2 uppercase tracking-widest">Visibility</p>
                 <div className="flex gap-2">
-                  {VISIBILITY_OPTIONS.map(({ value, icon: Icon, label, desc }) => (
-                    <button key={value} onClick={() => setVisibility(value)}
-                      className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all text-center"
+                  {VISIBILITY_OPTIONS.map(({ value, icon: Icon, label }) => (
+                    <motion.button
+                      key={value}
+                      onClick={() => setVisibility(value)}
+                      className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all text-center relative overflow-hidden"
                       style={{
                         background: visibility === value ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
-                        border: visibility === value ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.06)",
+                        border: visibility === value ? "1px solid rgba(99,102,241,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                        boxShadow: visibility === value ? "0 0 16px rgba(124,58,237,0.2)" : "none",
                       }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <Icon className={`w-4 h-4 ${visibility === value ? "text-indigo-400" : "text-slate-600"}`} />
                       <span className={`text-xs font-medium ${visibility === value ? "text-white" : "text-slate-500"}`}>{label}</span>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
 
-              {/* Error */}
               <AnimatePresence>
                 {error && (
-                  <motion.div className="mb-4 flex items-center gap-2.5 px-4 py-3 rounded-xl text-red-300 text-sm"
+                  <motion.div className="mb-4 flex items-center gap-2.5 px-4 py-3 rounded-xl text-red-300 text-sm relative"
                     style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
                     initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                     <X className="w-4 h-4 flex-shrink-0" />{error}
@@ -359,18 +385,33 @@ const CreateMemory = () => {
                 )}
               </AnimatePresence>
 
-              {/* Action buttons */}
-              <div className="flex gap-3 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                <button onClick={handlePreview}
+              <div className="flex gap-3 pt-2 relative" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                <motion.button onClick={handlePreview}
                   className="flex-1 py-2.5 rounded-xl text-slate-300 hover:text-white text-sm font-medium transition-all"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  whileHover={{ scale: 1.02, borderColor: "rgba(167,139,250,0.3)" }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   Preview
-                </button>
+                </motion.button>
                 <motion.button onClick={handlePublish} disabled={!canPublish}
-                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: canPublish ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "rgba(99,102,241,0.3)" }}
-                  whileHover={canPublish ? { scale: 1.02 } : {}} whileTap={canPublish ? { scale: 0.98 } : {}}>
-                  {uploadingMedia ? "Uploading…" : loading ? "Publishing…" : "Publish"}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden"
+                  style={{
+                    background: canPublish ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "rgba(99,102,241,0.3)",
+                    boxShadow: canPublish ? "0 4px 20px rgba(124,58,237,0.4)" : "none",
+                  }}
+                  whileHover={canPublish ? { scale: 1.02, boxShadow: "0 4px 32px rgba(124,58,237,0.6)" } : {}}
+                  whileTap={canPublish ? { scale: 0.98 } : {}}
+                >
+                  {canPublish && (
+                    <motion.div
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                    />
+                  )}
+                  <span className="relative">{uploadingMedia ? "Uploading…" : loading ? "Publishing…" : "Publish"}</span>
                 </motion.button>
               </div>
             </motion.div>
@@ -378,19 +419,27 @@ const CreateMemory = () => {
         </main>
       </div>
 
+      <MobileBottomNav />
+
       {/* Preview Modal */}
       <AnimatePresence>
         {showPreview && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(0,0,0,0.85)" }}
+            style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setShowPreview(false)}>
             <motion.div className="max-w-md w-full rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
-              style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.08)" }}
-              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+              style={{
+                background: "linear-gradient(135deg, rgba(22,22,40,0.95), rgba(13,13,26,0.95))",
+                border: "1px solid rgba(167,139,250,0.2)",
+                boxShadow: "0 0 60px rgba(124,58,237,0.3)",
+              }}
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
               onClick={e => e.stopPropagation()}>
 
-              {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <p className="text-white font-semibold text-sm">Preview</p>
                 <button onClick={() => setShowPreview(false)} className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
@@ -398,7 +447,6 @@ const CreateMemory = () => {
                 </button>
               </div>
 
-              {/* Post preview */}
               <div className="rounded-xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold text-sm">
@@ -423,16 +471,20 @@ const CreateMemory = () => {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setShowPreview(false)}
+                <motion.button onClick={() => setShowPreview(false)}
                   className="flex-1 py-2.5 rounded-xl text-slate-300 text-sm font-medium transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                >
                   Edit
-                </button>
-                <button onClick={() => { setShowPreview(false); handlePublish(); }}
+                </motion.button>
+                <motion.button onClick={() => { setShowPreview(false); handlePublish(); }}
                   className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all"
-                  style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                  style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 16px rgba(124,58,237,0.4)" }}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                >
                   Publish
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

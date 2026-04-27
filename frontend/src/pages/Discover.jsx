@@ -1,79 +1,44 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import { showSuccess, showError } from "../utils/toast";
 import { UserCardSkeleton } from "../components/common/LoadingSkeleton";
+import AnimatedBackdrop from "../components/common/AnimatedBackdrop";
+import BombasticSidebar from "../components/common/BombasticSidebar";
+import CommandBar from "../components/common/CommandBar";
+import MobileTopBar from "../components/common/MobileTopBar";
+import MobileBottomNav from "../components/common/MobileBottomNav";
 import {
-  Users, UserPlus, UserCheck, Search, Plus,
-  Home as HomeIcon, Bell, User as UserIcon,
-  Compass, ShoppingBag, Mail, Bookmark, LogOut,
+  Users, UserPlus, UserCheck, Search, Compass, Sparkles,
 } from "lucide-react";
 
-// ─── Shared Sidebar ───────────────────────────────────────────────────────────
-const Sidebar = ({ user, logout, navigate, location }) => {
-  const navLinks = [
-    { icon: HomeIcon, label: "Home", path: "/" },
-    { icon: Compass, label: "Discover", path: "/discover" },
-    { icon: ShoppingBag, label: "Marketplace", path: "/marketplace" },
-    { icon: Mail, label: "Messages", path: "/messages" },
-    { icon: Bell, label: "Notifications", path: "/notifications", badge: true },
-    { icon: Bookmark, label: "Bookmarks", path: "/bookmarks" },
-    { icon: UserIcon, label: "Profile", path: "/profile" },
-  ];
-
-  return (
-    <aside
-      className="hidden lg:flex flex-col flex-shrink-0 sticky top-0 h-screen overflow-hidden transition-all duration-300 ease-in-out group/sidebar"
-      style={{ width: "72px", borderRight: "1px solid rgba(255,255,255,0.06)" }}
-      onMouseEnter={e => { e.currentTarget.style.width = "240px"; }}
-      onMouseLeave={e => { e.currentTarget.style.width = "72px"; }}
-    >
-      <div className="px-4 py-6 flex items-center overflow-hidden" style={{ minHeight: "72px" }}>
-        <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent flex-shrink-0 w-8 text-center">A</span>
-        <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-100">URA</span>
-      </div>
-
-      <nav className="flex flex-col gap-0.5 flex-1 px-2">
-        {navLinks.map(item => (
-          <button key={item.path} onClick={() => navigate(item.path)}
-            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"
-              }`}
-            style={{ minHeight: "48px", padding: "0 14px" }}
-          >
-            <item.icon className={`w-6 h-6 flex-shrink-0 transition-colors ${location.pathname === item.path ? "text-indigo-400" : "group-hover/item:text-indigo-400"}`} />
-            <span className="ml-4 text-[15px] font-medium whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">{item.label}</span>
-            {item.badge && <span className="absolute top-3 left-8 w-2 h-2 rounded-full bg-red-500" />}
-          </button>
-        ))}
-      </nav>
-
-      <div className="px-2 mt-2">
-        <button onClick={() => navigate("/create")}
-          className="w-full flex items-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all text-sm shadow-lg shadow-indigo-900/40 overflow-hidden"
-          style={{ minHeight: "44px", padding: "0 14px" }}>
-          <Plus className="w-5 h-5 flex-shrink-0" />
-          <span className="ml-4 whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75">Create Memory</span>
-        </button>
-      </div>
-
-      <div className="mx-2 mt-3 mb-4 flex items-center rounded-xl hover:bg-white/5 transition-colors cursor-pointer group/user overflow-hidden"
-        style={{ minHeight: "56px", padding: "0 10px" }} onClick={() => navigate("/profile")}>
-        <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-          {user?.profilePicture ? <img src={user.profilePicture} alt="" className="w-full h-full object-cover" /> : (user?.username?.charAt(0).toUpperCase() || "U")}
-        </div>
-        <div className="ml-3 flex-1 min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75">
-          <p className="text-white text-xs font-semibold truncate">{user?.username}</p>
-          <p className="text-slate-600 text-xs truncate">{user?.email}</p>
-        </div>
-        <button onClick={e => { e.stopPropagation(); logout(); navigate("/login"); }}
-          className="ml-2 p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors flex-shrink-0 opacity-0 group-hover/sidebar:opacity-100 group-hover/user:opacity-100">
-          <LogOut className="w-4 h-4" />
-        </button>
-      </div>
-    </aside>
-  );
+// ─── Map dominant OCEAN trait → ring color (same as Home) ────────────────────
+const TRAIT_KEYS = ["O", "C", "E", "A", "N"];
+const getDominantTrait = (personality) => {
+  if (!personality) return "O";
+  let best = "O", val = -1;
+  for (const k of TRAIT_KEYS) {
+    if (typeof personality[k] === "number" && personality[k] > val) {
+      val = personality[k]; best = k;
+    }
+  }
+  return best;
+};
+const TRAIT_RING_COLORS = {
+  O: "conic-gradient(#a78bfa, #c4b5fd, #7c3aed, #a78bfa)",
+  C: "conic-gradient(#6366f1, #818cf8, #4f46e5, #6366f1)",
+  E: "conic-gradient(#f59e0b, #fbbf24, #d97706, #f59e0b)",
+  A: "conic-gradient(#34d399, #6ee7b7, #059669, #34d399)",
+  N: "conic-gradient(#ef4444, #f87171, #b91c1c, #ef4444)",
+};
+const TRAIT_AVATAR_GRADIENT = {
+  O: "linear-gradient(135deg, #a78bfa, #7c3aed)",
+  C: "linear-gradient(135deg, #818cf8, #4f46e5)",
+  E: "linear-gradient(135deg, #fbbf24, #d97706)",
+  A: "linear-gradient(135deg, #6ee7b7, #059669)",
+  N: "linear-gradient(135deg, #f87171, #b91c1c)",
 };
 
 // ─── Discover ─────────────────────────────────────────────────────────────────
@@ -81,9 +46,8 @@ const Discover = () => {
   const [suggestedUsers, setSuggestedUsers] = useState([]);
   const [followingStatus, setFollowingStatus] = useState({});
   const [loading, setLoading] = useState(true);
-  const { user, logout, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => { fetchSuggestions(); }, []);
 
@@ -142,64 +106,108 @@ const Discover = () => {
   };
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#0d0d1a" }}>
+    <div className="min-h-screen text-white relative">
+      <AnimatedBackdrop />
 
-      {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-3"
-        style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <span className="text-lg font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">AURA</span>
-        <button onClick={() => navigate("/search")} className="p-2 text-slate-400 hover:text-white">
-          <Search className="w-5 h-5" />
-        </button>
-      </div>
+      <CommandBar recentActivityCount={suggestedUsers.length} isLive={!loading} />
+      <MobileTopBar title="Discover" icon={Compass} showBack={false} />
 
-      <div className="flex">
-        <Sidebar user={user} logout={logout} navigate={navigate} location={location} />
+      <div className="flex relative">
+        <BombasticSidebar />
 
-        {/* Main */}
         <main className="flex-1 min-w-0">
-          {/* Header */}
-          <div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-between"
-            style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          {/* Page header */}
+          <motion.div
+            className="sticky top-[42px] z-40 px-6 py-4 flex items-center justify-between"
+            style={{
+              background: "rgba(10,10,20,0.85)",
+              backdropFilter: "blur(20px)",
+              borderBottom: "1px solid rgba(167,139,250,0.1)",
+            }}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
             <div>
               <h1 className="text-base font-bold text-white flex items-center gap-2">
-                <Compass className="w-5 h-5 text-indigo-400" />
-                Discover People
+                <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+                  <Compass className="w-5 h-5 text-indigo-400" />
+                </motion.div>
+                <span className="bg-gradient-to-r from-white via-indigo-200 to-violet-300 bg-clip-text text-transparent">
+                  Discover People
+                </span>
               </h1>
               <p className="text-slate-600 text-xs mt-0.5">Find and connect with the AURA community</p>
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer"
-              style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
-              onClick={() => navigate("/search")}>
+            <motion.div
+              className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer"
+              style={{
+                background: "rgba(19,19,42,0.8)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(167,139,250,0.15)",
+              }}
+              whileHover={{ scale: 1.03, borderColor: "rgba(167,139,250,0.3)" }}
+              onClick={() => navigate("/search")}
+            >
               <Search className="w-4 h-4 text-slate-500" />
               <span className="text-slate-600 text-sm hidden sm:block">Search people…</span>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           <div className="px-6 py-6 pb-24 lg:pb-8">
-            {/* Section label */}
-            <div className="flex items-center gap-2 mb-5">
-              <Users className="w-4 h-4 text-indigo-400" />
+            <motion.div
+              className="flex items-center gap-2 mb-5"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Users className="w-4 h-4 text-indigo-400" />
+              </motion.div>
               <span className="text-white font-semibold text-sm">Suggested for you</span>
               <span className="text-slate-600 text-xs ml-1">
                 {!loading && `· ${suggestedUsers.length} people`}
               </span>
-            </div>
+            </motion.div>
 
-            {/* Grid */}
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => <UserCardSkeleton key={i} />)}
+                {[...Array(6)].map((_, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                    <UserCardSkeleton />
+                  </motion.div>
+                ))}
               </div>
             ) : suggestedUsers.length === 0 ? (
-              <div className="text-center py-20 rounded-2xl" style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                  style={{ background: "rgba(99,102,241,0.1)" }}>
+              <motion.div
+                className="text-center py-20 rounded-2xl"
+                style={{
+                  background: "rgba(19,19,42,0.6)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(167,139,250,0.1)",
+                }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <motion.div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 relative"
+                  style={{ background: "rgba(99,102,241,0.1)" }}
+                  animate={{
+                    boxShadow: [
+                      "0 0 20px rgba(124,58,237,0.2)",
+                      "0 0 40px rgba(124,58,237,0.4)",
+                      "0 0 20px rgba(124,58,237,0.2)",
+                    ],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
                   <Users className="w-8 h-8 text-indigo-400" />
-                </div>
+                </motion.div>
                 <p className="text-white font-semibold mb-1">No suggestions right now</p>
                 <p className="text-slate-600 text-sm">Check back later for new people to follow</p>
-              </div>
+              </motion.div>
             ) : (
               <motion.div
                 className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
@@ -209,36 +217,74 @@ const Discover = () => {
               >
                 {suggestedUsers.map((u) => {
                   const isFollowing = followingStatus[u.id] || false;
+                  const dominant = getDominantTrait(u.personality);
+                  const ringStyle = TRAIT_RING_COLORS[dominant];
+                  const avatarBg = TRAIT_AVATAR_GRADIENT[dominant];
+                  const hasPersonality = u.personality && TRAIT_KEYS.some(k => typeof u.personality[k] === "number");
+
                   return (
                     <motion.div
                       key={u.id}
-                      className="rounded-2xl p-5 cursor-pointer transition-all"
-                      style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
+                      className="rounded-2xl p-5 cursor-pointer transition-all relative overflow-hidden"
+                      style={{
+                        background: "rgba(19,19,42,0.7)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(167,139,250,0.1)",
+                      }}
                       variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                      whileHover={{ scale: 1.02, borderColor: "rgba(99,102,241,0.3)" }}
+                      whileHover={{
+                        scale: 1.02,
+                        borderColor: "rgba(167,139,250,0.4)",
+                        boxShadow: "0 0 32px rgba(124,58,237,0.2)",
+                      }}
                       onClick={() => navigate(`/user/${u.id}`)}
                     >
-                      {/* Avatar + info */}
-                      <div className="flex flex-col items-center text-center mb-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xl font-bold mb-3 shadow-lg"
-                          style={{ boxShadow: "0 0 20px rgba(99,102,241,0.25)" }}>
-                          {u.username?.charAt(0).toUpperCase() || "U"}
-                        </div>
+                      {/* Shimmer on hover */}
+                      <motion.div
+                        className="absolute inset-0 opacity-0 pointer-events-none"
+                        style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.05), transparent)" }}
+                        animate={{ x: ["-100%", "100%"] }}
+                        transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+                      />
+
+                      <div className="flex flex-col items-center text-center mb-4 relative">
+                        <motion.div
+                          className="w-16 h-16 rounded-full p-[2px] mb-3"
+                          style={{ background: hasPersonality ? ringStyle : "rgba(100,116,139,0.4)" }}
+                          animate={{ rotate: hasPersonality ? 360 : 0 }}
+                          transition={{ duration: 20, repeat: hasPersonality ? Infinity : 0, ease: "linear" }}
+                        >
+                          <div
+                            className="w-full h-full rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold"
+                            style={{ background: u.profilePicture ? "transparent" : avatarBg }}
+                          >
+                            {u.profilePicture
+                              ? <img src={u.profilePicture} alt={u.username} className="w-full h-full object-cover" />
+                              : u.username?.charAt(0).toUpperCase() || "U"}
+                          </div>
+                        </motion.div>
                         <h3 className="text-white font-semibold text-sm mb-0.5">{u.username}</h3>
                         <p className="text-slate-600 text-xs">{u.followerCount || 0} followers</p>
                       </div>
 
-                      {/* Follow / Following button */}
                       <motion.button
                         onClick={e => isFollowing ? handleUnfollow(u.id, e) : handleFollow(u.id, e)}
-                        className="w-full py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                        className="w-full py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 relative overflow-hidden"
                         style={isFollowing
                           ? { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#94a3b8" }
-                          : { background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff" }
+                          : { background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", boxShadow: "0 4px 12px rgba(124,58,237,0.3)" }
                         }
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                       >
+                        {!isFollowing && (
+                          <motion.div
+                            className="absolute inset-0"
+                            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)" }}
+                            animate={{ x: ["-100%", "100%"] }}
+                            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                          />
+                        )}
                         {isFollowing
                           ? <><UserCheck className="w-4 h-4" /> Following</>
                           : <><UserPlus className="w-4 h-4" /> Follow</>
@@ -253,27 +299,7 @@ const Discover = () => {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 border-t border-white/[0.05] px-2 py-2 z-50"
-        style={{ background: "#0d0d1a" }}>
-        <div className="flex items-center justify-around max-w-sm mx-auto">
-          {[
-            { icon: HomeIcon, path: "/" },
-            { icon: Search, path: "/search" },
-            { icon: Plus, path: "/create", fab: true },
-            { icon: Bell, path: "/notifications" },
-            { icon: UserIcon, path: "/profile" },
-          ].map(({ icon: Icon, path, fab }) => (
-            <button key={path} onClick={() => navigate(path)}
-              className={fab
-                ? "w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg"
-                : `p-2.5 rounded-xl transition-colors ${location.pathname === path ? "text-indigo-400 bg-indigo-400/10" : "text-slate-500 hover:text-white"}`
-              }>
-              <Icon className="w-5 h-5" />
-            </button>
-          ))}
-        </div>
-      </nav>
+      <MobileBottomNav />
     </div>
   );
 };

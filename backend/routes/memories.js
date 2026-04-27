@@ -6,7 +6,11 @@ const upload = require("../middleware/upload");
 const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
 const axios = require("axios");
-const { analyzeMemory, getRecommendedMemoryIds } = require("../services/aiService");
+const {
+  analyzeMemory,
+  getRecommendedMemoryIds,
+  getMarketplaceRecommendations,   // ← ADDED
+} = require("../services/aiService");
 
 const videoUpload = multer({
   storage: multer.memoryStorage(),
@@ -109,7 +113,6 @@ router.post("/upload-video", auth, videoUpload.single("video"), async (req, res)
 });
 
 // ─── GET /api/memories/feed ───────────────────────────────────────────────────
-// Replace your existing /feed route with this one
 router.get("/feed", auth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -180,6 +183,64 @@ router.get("/feed", auth, async (req, res) => {
       total: totalMemories,
     });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/memories/marketplace-recommend ──────────────────────────────────
+// ADDED — Returns NFT-minted memories ranked by the user's OCEAN vector,
+// excluding memories the viewer already owns. Falls back to a chronological
+// list of minted memories if the user has no personality vector yet.
+router.get("/marketplace-recommend", auth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const viewerId = req.user.id;
+
+    // Pull viewer's personality vector
+    const viewer = await User.findById(viewerId).select("personality").lean();
+    const p = viewer?.personality;
+    const hasVector = p && ["O", "C", "E", "A", "N"].every(k => typeof p[k] === "number");
+
+    let recommendations = [];
+
+    if (hasVector) {
+      // Personalized path — use the recommendation engine
+      recommendations = await getMarketplaceRecommendations(p, viewerId, limit);
+    }
+
+    // Fallback path:
+    //   - User has no vector yet (didn't complete onboarding), OR
+    //   - The engine returned 0 matches (no NFTs match their growth profile)
+    // In either case, show all minted NFTs sorted by newest-first so the
+    // marketplace isn't empty.
+    if (recommendations.length === 0) {
+      recommendations = await Memory.find({
+        nftTokenId: { $ne: null },
+        user: { $ne: viewerId },
+        visibility: { $in: ["public", "friends"] },
+      })
+        .populate("user", "username email profilePicture")
+        .sort({ nftMintedAt: -1, createdAt: -1 })
+        .limit(limit)
+        .lean();
+    }
+
+    // Format for frontend (likesCount, image/video defaults — matches /feed)
+    const formatted = recommendations.map(m => ({
+      ...m,
+      likesCount: m.likes?.length || 0,
+      image: m.image || null,
+      video: m.video || null,
+    }));
+
+    res.json({
+      success: true,
+      memories: formatted,
+      personalized: hasVector && recommendations.length > 0,
+      count: formatted.length,
+    });
+  } catch (err) {
+    console.error("[marketplace-recommend] error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -282,7 +343,6 @@ router.post("/:id/comment", auth, async (req, res) => {
 });
 
 // ─── GET /api/memories/user/:userId ──────────────────────────────────────────
-// Replace your existing user/:userId route with this one
 router.get("/user/:userId", auth, async (req, res) => {
   try {
     const { userId } = req.params;

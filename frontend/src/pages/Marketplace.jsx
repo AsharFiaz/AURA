@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import { useAuth } from "../context/AuthContext";
 import { useWallet } from "../context/WalletContext";
@@ -8,70 +8,16 @@ import { useMarketplace } from "../hooks/useMarketplace";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../config/blockchain";
 import api from "../utils/api";
 import ConnectWallet from "../components/blockchain/ConnectWallet";
+import RecommendedNFTs from "../components/marketplace/RecommendedNFTs";
+import AnimatedBackdrop from "../components/common/AnimatedBackdrop";
+import BombasticSidebar from "../components/common/BombasticSidebar";
+import CommandBar from "../components/common/CommandBar";
+import MobileTopBar from "../components/common/MobileTopBar";
+import MobileBottomNav from "../components/common/MobileBottomNav";
 import {
-  Search, Filter, TrendingUp, Sparkles,
-  Home as HomeIcon, Bell, User as UserIcon,
-  Compass, ShoppingBag, Mail, Bookmark,
-  LogOut, Plus, Tag, X, Loader2, AlertCircle,
-  CheckCircle2, ExternalLink,
+  Search, Sparkles, ShoppingBag, Tag, X, Loader2,
+  AlertCircle, CheckCircle2,
 } from "lucide-react";
-
-// ─── Sidebar (same as existing) ───────────────────────────────────────────────
-const Sidebar = ({ user, logout, navigate, location }) => {
-  const navLinks = [
-    { icon: HomeIcon, label: "Home", path: "/" },
-    { icon: Compass, label: "Discover", path: "/discover" },
-    { icon: ShoppingBag, label: "Marketplace", path: "/marketplace" },
-    { icon: Mail, label: "Messages", path: "/messages" },
-    { icon: Bell, label: "Notifications", path: "/notifications", badge: true },
-    { icon: Bookmark, label: "Bookmarks", path: "/bookmarks" },
-    { icon: UserIcon, label: "Profile", path: "/profile" },
-  ];
-  return (
-    <aside className="hidden lg:flex flex-col flex-shrink-0 sticky top-0 h-screen overflow-hidden transition-all duration-300 ease-in-out group/sidebar"
-      style={{ width: "72px", borderRight: "1px solid rgba(255,255,255,0.06)" }}
-      onMouseEnter={e => { e.currentTarget.style.width = "240px"; }}
-      onMouseLeave={e => { e.currentTarget.style.width = "72px"; }}>
-      <div className="px-4 py-6 flex items-center overflow-hidden" style={{ minHeight: "72px" }}>
-        <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent flex-shrink-0 w-8 text-center">A</span>
-        <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-100">URA</span>
-      </div>
-      <nav className="flex flex-col gap-0.5 flex-1 px-2">
-        {navLinks.map(item => (
-          <button key={item.path} onClick={() => navigate(item.path)}
-            className={`flex items-center rounded-xl transition-all duration-150 group/item relative ${location.pathname === item.path ? "text-white bg-white/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
-            style={{ minHeight: "48px", padding: "0 14px" }}>
-            <item.icon className={`w-6 h-6 flex-shrink-0 transition-colors ${location.pathname === item.path ? "text-indigo-400" : "group-hover/item:text-indigo-400"}`} />
-            <span className="ml-4 text-[15px] font-medium whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">{item.label}</span>
-            {item.badge && <span className="absolute top-3 left-8 w-2 h-2 rounded-full bg-red-500" />}
-          </button>
-        ))}
-      </nav>
-      <div className="px-2 mt-2">
-        <button onClick={() => navigate("/create")}
-          className="w-full flex items-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all text-sm shadow-lg shadow-indigo-900/40 overflow-hidden"
-          style={{ minHeight: "44px", padding: "0 14px" }}>
-          <Plus className="w-5 h-5 flex-shrink-0" />
-          <span className="ml-4 whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75">Create Memory</span>
-        </button>
-      </div>
-      <div className="mx-2 mt-3 mb-4 flex items-center rounded-xl hover:bg-white/5 transition-colors cursor-pointer group/user overflow-hidden"
-        style={{ minHeight: "56px", padding: "0 10px" }} onClick={() => navigate("/profile")}>
-        <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-          {user?.profilePicture ? <img src={user.profilePicture} alt="" className="w-full h-full object-cover" /> : (user?.username?.charAt(0).toUpperCase() || "U")}
-        </div>
-        <div className="ml-3 flex-1 min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200 delay-75">
-          <p className="text-white text-xs font-semibold truncate">{user?.username}</p>
-          <p className="text-slate-600 text-xs truncate">{user?.email}</p>
-        </div>
-        <button onClick={e => { e.stopPropagation(); logout(); navigate("/login"); }}
-          className="ml-2 p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors flex-shrink-0 opacity-0 group-hover/sidebar:opacity-100 group-hover/user:opacity-100">
-          <LogOut className="w-4 h-4" />
-        </button>
-      </div>
-    </aside>
-  );
-};
 
 // ─── List Modal ───────────────────────────────────────────────────────────────
 const ListModal = ({ memory, tokenId, onClose, onSuccess }) => {
@@ -87,60 +33,112 @@ const ListModal = ({ memory, tokenId, onClose, onSuccess }) => {
 
   return (
     <AnimatePresence>
-      <motion.div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-        <motion.div className="w-full max-w-sm rounded-2xl p-6"
-          style={{ background: "#0d0d1a", border: "1px solid rgba(99,102,241,0.25)", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
-          initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+        <motion.div className="w-full max-w-sm rounded-2xl p-6 relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(22,22,40,0.95), rgba(13,13,26,0.95))",
+            border: "1px solid rgba(167,139,250,0.25)",
+            boxShadow: "0 0 60px rgba(124,58,237,0.3)",
+          }}
+          initial={{ scale: 0.92, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.92, opacity: 0, y: 20 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
           onClick={e => e.stopPropagation()}>
 
-          <div className="flex items-center justify-between mb-5">
+          {/* Animated edge shimmer */}
+          <motion.div
+            className="absolute inset-0 opacity-50 pointer-events-none"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.08), transparent)" }}
+            animate={{ x: ["-100%", "100%"] }}
+            transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+          />
+
+          <div className="flex items-center justify-between mb-5 relative">
             <div className="flex items-center gap-2">
-              <Tag className="w-5 h-5 text-indigo-400" />
+              <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+                <Tag className="w-5 h-5 text-indigo-400" />
+              </motion.div>
               <h2 className="text-white font-bold text-lg">List for Sale</h2>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-colors">
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {success ? (
-            <motion.div className="text-center py-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-              <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
+            <motion.div className="text-center py-4 relative" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+              <motion.div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 relative"
+                style={{ background: "rgba(74,222,128,0.1)", border: "2px solid rgba(74,222,128,0.3)" }}
+                animate={{
+                  boxShadow: [
+                    "0 0 24px rgba(74,222,128,0.3)",
+                    "0 0 48px rgba(74,222,128,0.6)",
+                    "0 0 24px rgba(74,222,128,0.3)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <CheckCircle2 className="w-8 h-8 text-green-400" />
+              </motion.div>
               <p className="text-white font-bold text-lg mb-1">Listed Successfully!</p>
               <p className="text-slate-400 text-sm mb-4">Token #{tokenId} is now on the marketplace</p>
-              <motion.button onClick={onClose} className="px-6 py-2 rounded-xl text-white text-sm font-semibold"
+              <motion.button onClick={onClose} className="px-6 py-2 rounded-xl text-white text-sm font-semibold relative overflow-hidden"
                 style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}
-                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>Done</motion.button>
+                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                Done
+              </motion.button>
             </motion.div>
           ) : (
             <>
-              <div className="rounded-xl p-3 mb-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="rounded-xl p-3 mb-5 relative"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <p className="text-slate-300 text-sm line-clamp-2">{memory.caption}</p>
                 {memory.image && <img src={memory.image} alt="" className="w-full h-24 object-cover rounded-lg mt-2" />}
-                <p className="text-indigo-400 text-xs mt-2">Token #{tokenId}</p>
+                <p className="text-indigo-400 text-xs mt-2 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Token #{tokenId}
+                </p>
               </div>
 
-              <div className="mb-5">
-                <label className="text-slate-400 text-xs font-medium mb-1.5 block">Price (ETH)</label>
+              <div className="mb-5 relative">
+                <label className="text-slate-400 text-xs font-medium mb-1.5 block uppercase tracking-widest">Price (ETH)</label>
                 <input type="number" step="0.001" min="0.001" placeholder="e.g. 0.5"
                   value={price} onChange={e => setPrice(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none"
-                  style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.07)" }}
-                  onFocus={e => e.target.style.borderColor = "rgba(99,102,241,0.5)"}
-                  onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.07)"} />
+                  className="w-full px-4 py-3 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none transition-all"
+                  style={{ background: "rgba(13,13,26,0.6)", border: "1px solid rgba(167,139,250,0.15)" }}
+                  onFocus={e => { e.target.style.borderColor = "rgba(167,139,250,0.5)"; e.target.style.boxShadow = "0 0 16px rgba(124,58,237,0.2)"; }}
+                  onBlur={e => { e.target.style.borderColor = "rgba(167,139,250,0.15)"; e.target.style.boxShadow = "none"; }} />
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 p-3 rounded-xl text-red-300 text-sm mb-4"
-                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <motion.div className="flex items-start gap-2 p-3 rounded-xl text-red-300 text-sm mb-4 relative"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>{error}</span>
-                </div>
+                </motion.div>
               )}
 
               <motion.button onClick={handleList} disabled={loading || !price}
-                className="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60 relative overflow-hidden"
                 style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 20px rgba(79,70,229,0.35)" }}
-                whileHover={!loading ? { scale: 1.02 } : {}} whileTap={!loading ? { scale: 0.98 } : {}}>
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Listing… confirm in MetaMask</> : <><Tag className="w-4 h-4" /> List for Sale</>}
+                whileHover={!loading ? { scale: 1.02, boxShadow: "0 4px 32px rgba(124,58,237,0.6)" } : {}}
+                whileTap={!loading ? { scale: 0.98 } : {}}>
+                {!loading && (
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                  />
+                )}
+                <span className="relative flex items-center gap-2">
+                  {loading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Listing… confirm in MetaMask</>
+                    : <><Tag className="w-4 h-4" /> List for Sale</>}
+                </span>
               </motion.button>
             </>
           )}
@@ -163,24 +161,68 @@ const BuyModal = ({ memory, tokenId, priceEth, onClose, onSuccess }) => {
 
   return (
     <AnimatePresence>
-      <motion.div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-        <motion.div className="w-full max-w-sm rounded-2xl p-6"
-          style={{ background: "#0d0d1a", border: "1px solid rgba(99,102,241,0.25)", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
-          initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+        <motion.div className="w-full max-w-sm rounded-2xl p-6 relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(22,22,40,0.95), rgba(13,13,26,0.95))",
+            border: "1px solid rgba(167,139,250,0.25)",
+            boxShadow: "0 0 60px rgba(124,58,237,0.3)",
+          }}
+          initial={{ scale: 0.92, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.92, opacity: 0, y: 20 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
           onClick={e => e.stopPropagation()}>
 
-          <div className="flex items-center justify-between mb-5">
+          <motion.div
+            className="absolute inset-0 opacity-50 pointer-events-none"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.08), transparent)" }}
+            animate={{ x: ["-100%", "100%"] }}
+            transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+          />
+
+          <div className="flex items-center justify-between mb-5 relative">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-indigo-400" />
+              <motion.div animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+                <ShoppingBag className="w-5 h-5 text-indigo-400" />
+              </motion.div>
               <h2 className="text-white font-bold text-lg">Buy NFT</h2>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-colors">
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {success ? (
-            <motion.div className="text-center py-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-              <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
+            <motion.div className="text-center py-4 relative" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+              <motion.div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 relative"
+                style={{ background: "rgba(74,222,128,0.1)", border: "2px solid rgba(74,222,128,0.3)" }}
+                animate={{
+                  boxShadow: [
+                    "0 0 24px rgba(74,222,128,0.3)",
+                    "0 0 48px rgba(74,222,128,0.6)",
+                    "0 0 24px rgba(74,222,128,0.3)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <CheckCircle2 className="w-8 h-8 text-green-400" />
+                {[...Array(6)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute"
+                    style={{ left: "50%", top: "50%", transform: `rotate(${i * 60}deg) translateY(-40px)` }}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
+                    transition={{ duration: 1.5, delay: 0.3 + i * 0.1, repeat: Infinity, repeatDelay: 1 }}
+                  >
+                    <Sparkles className="w-3 h-3 text-yellow-400" />
+                  </motion.div>
+                ))}
+              </motion.div>
               <p className="text-white font-bold text-lg mb-1">Purchase Successful!</p>
               <p className="text-slate-400 text-sm mb-4">Token #{tokenId} is now in your wallet</p>
               <motion.button onClick={onClose} className="px-6 py-2 rounded-xl text-white text-sm font-semibold"
@@ -189,39 +231,63 @@ const BuyModal = ({ memory, tokenId, priceEth, onClose, onSuccess }) => {
             </motion.div>
           ) : (
             <>
-              <div className="rounded-xl p-3 mb-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="rounded-xl p-3 mb-5 relative"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <p className="text-slate-300 text-sm line-clamp-2">{memory.caption}</p>
                 {memory.image && <img src={memory.image} alt="" className="w-full h-24 object-cover rounded-lg mt-2" />}
               </div>
 
-              <div className="rounded-xl p-4 mb-5" style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+              <motion.div className="rounded-xl p-4 mb-5 relative overflow-hidden"
+                style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
+                animate={{
+                  boxShadow: [
+                    "0 0 16px rgba(124,58,237,0.1)",
+                    "0 0 32px rgba(124,58,237,0.3)",
+                    "0 0 16px rgba(124,58,237,0.1)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 text-sm">Price</span>
-                  <span className="text-white font-bold text-xl">{priceEth} ETH</span>
+                  <span className="text-slate-400 text-sm uppercase tracking-widest text-xs">Price</span>
+                  <span className="text-white font-bold text-2xl">{priceEth} ETH</span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-slate-600 text-xs">Token #{tokenId}</span>
                   <span className="text-slate-600 text-xs">Hardhat Local</span>
                 </div>
-              </div>
+              </motion.div>
 
               {!account && (
                 <div className="mb-4 flex justify-center"><ConnectWallet /></div>
               )}
 
               {error && (
-                <div className="flex items-start gap-2 p-3 rounded-xl text-red-300 text-sm mb-4"
-                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <motion.div className="flex items-start gap-2 p-3 rounded-xl text-red-300 text-sm mb-4"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>{error}</span>
-                </div>
+                </motion.div>
               )}
 
               {account && (
                 <motion.button onClick={handleBuy} disabled={loading}
-                  className="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60 relative overflow-hidden"
                   style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 20px rgba(79,70,229,0.35)" }}
-                  whileHover={!loading ? { scale: 1.02 } : {}} whileTap={!loading ? { scale: 0.98 } : {}}>
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Buying… confirm in MetaMask</> : <><ShoppingBag className="w-4 h-4" /> Buy for {priceEth} ETH</>}
+                  whileHover={!loading ? { scale: 1.02, boxShadow: "0 4px 32px rgba(124,58,237,0.6)" } : {}}
+                  whileTap={!loading ? { scale: 0.98 } : {}}>
+                  {!loading && (
+                    <motion.div
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                    />
+                  )}
+                  <span className="relative flex items-center gap-2">
+                    {loading
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Buying… confirm in MetaMask</>
+                      : <><ShoppingBag className="w-4 h-4" /> Buy for {priceEth} ETH</>}
+                  </span>
                 </motion.button>
               )}
             </>
@@ -233,7 +299,7 @@ const BuyModal = ({ memory, tokenId, priceEth, onClose, onSuccess }) => {
 };
 
 // ─── NFT Card ─────────────────────────────────────────────────────────────────
-const NFTCard = ({ memory, currentUserAccount, onRefresh }) => {
+const NFTCard = ({ memory, onRefresh }) => {
   const { user } = useAuth();
   const { cancelListing, loading } = useMarketplace();
   const [listModal, setListModal] = useState(false);
@@ -252,31 +318,60 @@ const NFTCard = ({ memory, currentUserAccount, onRefresh }) => {
 
   return (
     <>
-      <motion.div className="rounded-2xl overflow-hidden group"
-        style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}
+      <motion.div className="rounded-2xl overflow-hidden group relative"
+        style={{
+          background: "rgba(19,19,42,0.7)",
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(167,139,250,0.1)",
+        }}
         variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-        whileHover={{ scale: 1.02, borderColor: "rgba(99,102,241,0.3)" }}>
+        whileHover={{
+          scale: 1.02,
+          borderColor: "rgba(167,139,250,0.4)",
+          boxShadow: "0 0 32px rgba(124,58,237,0.2)",
+        }}>
+
+        {/* Shimmer on hover */}
+        <motion.div
+          className="absolute inset-0 opacity-0 pointer-events-none z-10"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.05), transparent)" }}
+          animate={{ x: ["-100%", "100%"] }}
+          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+        />
 
         {/* Image */}
         <div className="w-full h-44 relative overflow-hidden"
           style={{ background: "linear-gradient(135deg,rgba(79,70,229,0.15),rgba(124,58,237,0.1))" }}>
           {memory.image ? (
-            <img src={memory.image} alt="Memory" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img src={memory.image} alt="Memory" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
           ) : (
             <div className="flex flex-col items-center justify-center h-full">
-              <Sparkles className="w-10 h-10 text-indigo-400/50 mb-2" />
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }}>
+                <Sparkles className="w-10 h-10 text-indigo-400/50 mb-2" />
+              </motion.div>
               <p className="text-slate-600 text-xs">Memory NFT</p>
             </div>
           )}
           {/* Price badge */}
-          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-white text-xs font-bold"
-            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }}>
+          <motion.div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-white text-xs font-bold"
+            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "1px solid rgba(167,139,250,0.2)" }}
+            animate={isListed ? {
+              boxShadow: [
+                "0 0 0px rgba(124,58,237,0)",
+                "0 0 12px rgba(124,58,237,0.5)",
+                "0 0 0px rgba(124,58,237,0)",
+              ],
+            } : {}}
+            transition={{ duration: 2, repeat: Infinity }}>
             {isListed ? `${priceEth} ETH` : "Not listed"}
-          </div>
+          </motion.div>
           {/* NFT badge */}
           <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-indigo-300"
-            style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }}>
-            <Sparkles className="w-3 h-3" /> #{tokenId}
+            style={{ background: "rgba(99,102,241,0.2)", backdropFilter: "blur(8px)", border: "1px solid rgba(99,102,241,0.3)" }}>
+            <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }}>
+              <Sparkles className="w-3 h-3" />
+            </motion.div>
+            #{tokenId}
           </div>
         </div>
 
@@ -306,24 +401,39 @@ const NFTCard = ({ memory, currentUserAccount, onRefresh }) => {
                 <motion.button onClick={handleCancel} disabled={loading}
                   className="flex-1 py-2 rounded-xl text-red-300 text-xs font-semibold transition-all disabled:opacity-50"
                   style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
-                  whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  whileHover={{ scale: 1.03, borderColor: "rgba(239,68,68,0.4)" }}
+                  whileTap={{ scale: 0.97 }}>
                   {loading ? "Cancelling…" : "Cancel Listing"}
                 </motion.button>
               ) : (
                 <motion.button onClick={() => setListModal(true)}
-                  className="flex-1 py-2 rounded-xl text-white text-xs font-semibold"
-                  style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}
-                  whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Tag className="w-3 h-3 inline mr-1" />List for Sale
+                  className="flex-1 py-2 rounded-xl text-white text-xs font-semibold relative overflow-hidden"
+                  style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 12px rgba(124,58,237,0.3)" }}
+                  whileHover={{ scale: 1.03, boxShadow: "0 4px 20px rgba(124,58,237,0.5)" }}
+                  whileTap={{ scale: 0.97 }}>
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)" }}
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  />
+                  <span className="relative"><Tag className="w-3 h-3 inline mr-1" />List for Sale</span>
                 </motion.button>
               )
             ) : (
               isListed ? (
                 <motion.button onClick={() => setBuyModal(true)}
-                  className="flex-1 py-2 rounded-xl text-white text-xs font-semibold"
-                  style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}
-                  whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  Buy {priceEth} ETH
+                  className="flex-1 py-2 rounded-xl text-white text-xs font-semibold relative overflow-hidden"
+                  style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 12px rgba(124,58,237,0.3)" }}
+                  whileHover={{ scale: 1.03, boxShadow: "0 4px 20px rgba(124,58,237,0.5)" }}
+                  whileTap={{ scale: 0.97 }}>
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)" }}
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  />
+                  <span className="relative">Buy {priceEth} ETH</span>
                 </motion.button>
               ) : (
                 <div className="flex-1 py-2 rounded-xl text-slate-600 text-xs font-semibold text-center"
@@ -349,10 +459,8 @@ const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [stats, setStats] = useState({ totalMemories: 0, totalLikes: 0, activeSellers: 0, floorPrice: 0, volume24h: 0 });
-  const { user, logout } = useAuth();
   const { account } = useWallet();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const fetchNFTs = useCallback(async () => {
     try {
@@ -361,13 +469,10 @@ const Marketplace = () => {
       if (!r.data.success) return;
 
       const allMemories = r.data.memories;
-
-      // Filter only minted NFTs
       const minted = allMemories.filter(m => m.nftTokenId);
 
       if (minted.length === 0) { setNftMemories([]); return; }
 
-      // Fetch on-chain prices for all minted NFTs
       if (!window.ethereum) { setNftMemories(minted); return; }
 
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -417,26 +522,38 @@ const Marketplace = () => {
   const notListedCount = nftMemories.filter(m => !m.nftPrice || m.nftPrice === 0n).length;
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#0d0d1a" }}>
+    <div className="min-h-screen text-white relative">
+      <AnimatedBackdrop />
 
-      {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-3"
-        style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <span className="text-lg font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">AURA</span>
-        <ConnectWallet compact />
-      </div>
+      <CommandBar recentActivityCount={listedCount} isLive={!loading} />
+      <MobileTopBar title="Marketplace" icon={ShoppingBag} showBack={false}
+        rightAction={<ConnectWallet compact />} />
 
-      <div className="flex">
-        <Sidebar user={user} logout={logout} navigate={navigate} location={location} />
+      <div className="flex relative">
+        <BombasticSidebar />
 
         <main className="flex-1 min-w-0">
           {/* Header */}
-          <div className="sticky top-0 z-40 px-6 py-4"
-            style={{ background: "#0d0d1a", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <motion.div
+            className="sticky top-[42px] z-40 px-6 py-4"
+            style={{
+              background: "rgba(10,10,20,0.85)",
+              backdropFilter: "blur(20px)",
+              borderBottom: "1px solid rgba(167,139,250,0.1)",
+            }}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h1 className="text-base font-bold text-white flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-indigo-400" />Marketplace
+                  <motion.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+                    <ShoppingBag className="w-5 h-5 text-indigo-400" />
+                  </motion.div>
+                  <span className="bg-gradient-to-r from-white via-indigo-200 to-violet-300 bg-clip-text text-transparent">
+                    Marketplace
+                  </span>
                 </h1>
                 <p className="text-slate-600 text-xs mt-0.5">Buy and sell memory NFTs</p>
               </div>
@@ -446,95 +563,199 @@ const Marketplace = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
                     <input type="text" placeholder="Search NFTs…" value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      className="pl-9 pr-4 py-2 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none w-48"
-                      style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.07)" }}
-                      onFocus={e => e.target.style.borderColor = "rgba(99,102,241,0.4)"}
-                      onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.07)"} />
+                      className="pl-9 pr-4 py-2 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none w-48 transition-all"
+                      style={{
+                        background: "rgba(19,19,42,0.8)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(167,139,250,0.15)",
+                      }}
+                      onFocus={e => { e.target.style.borderColor = "rgba(167,139,250,0.5)"; e.target.style.boxShadow = "0 0 16px rgba(124,58,237,0.15)"; }}
+                      onBlur={e => { e.target.style.borderColor = "rgba(167,139,250,0.15)"; e.target.style.boxShadow = "none"; }} />
                   </div>
                   <select value={filter} onChange={e => setFilter(e.target.value)}
                     className="px-3 py-2 rounded-xl text-slate-300 text-sm focus:outline-none cursor-pointer"
-                    style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    style={{
+                      background: "rgba(19,19,42,0.8)",
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(167,139,250,0.15)",
+                    }}>
                     {["All", "Listed", "Not Listed"].map(v => <option key={v} value={v} style={{ background: "#13132a" }}>{v}</option>)}
                   </select>
                 </div>
                 <ConnectWallet compact />
               </div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="px-6 py-6 pb-24 lg:pb-8 space-y-6">
 
             {/* Stats */}
             <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-3"
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              initial="hidden" animate="visible"
+              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}>
               {[
-                { label: "Total NFTs", value: nftMemories.length },
-                { label: "Listed", value: listedCount },
-                { label: "Not Listed", value: notListedCount },
-                { label: "Total Memories", value: stats.totalMemories },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-2xl p-4"
-                  style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <p className="text-slate-600 text-xs mb-1">{label}</p>
-                  <p className="text-xl font-bold text-white">{value}</p>
-                </div>
+                { label: "Total NFTs", value: nftMemories.length, color: "#a78bfa" },
+                { label: "Listed", value: listedCount, color: "#34d399" },
+                { label: "Not Listed", value: notListedCount, color: "#94a3b8" },
+                { label: "Total Memories", value: stats.totalMemories, color: "#f59e0b" },
+              ].map(({ label, value, color }) => (
+                <motion.div key={label}
+                  className="rounded-2xl p-4 relative overflow-hidden"
+                  style={{
+                    background: "rgba(19,19,42,0.7)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(167,139,250,0.1)",
+                  }}
+                  variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                  whileHover={{
+                    scale: 1.03,
+                    borderColor: "rgba(167,139,250,0.3)",
+                    boxShadow: `0 0 24px ${color}30`,
+                  }}>
+                  <p className="text-slate-600 text-xs mb-1 uppercase tracking-widest">{label}</p>
+                  <motion.p
+                    className="text-2xl font-bold text-white"
+                    initial={{ scale: 0.5 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  >
+                    {value}
+                  </motion.p>
+                  {/* Pulsing accent dot */}
+                  <motion.span
+                    className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full"
+                    style={{ background: color }}
+                    animate={{
+                      boxShadow: [
+                        `0 0 0px ${color}`,
+                        `0 0 8px ${color}`,
+                        `0 0 0px ${color}`,
+                      ],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                </motion.div>
               ))}
             </motion.div>
 
             {/* No wallet warning */}
-            {!account && (
-              <motion.div className="rounded-2xl p-5 flex items-center gap-4"
-                style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <Sparkles className="w-8 h-8 text-indigo-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-white font-semibold text-sm">Connect your wallet to buy and sell NFTs</p>
-                  <p className="text-slate-500 text-xs mt-0.5">You need MetaMask connected to Hardhat Local to interact with the marketplace.</p>
-                </div>
-                <ConnectWallet />
-              </motion.div>
-            )}
+            <AnimatePresence>
+              {!account && (
+                <motion.div className="rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden"
+                  style={{
+                    background: "rgba(99,102,241,0.08)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(99,102,241,0.25)",
+                  }}
+                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <motion.div
+                    className="absolute inset-0 opacity-30 pointer-events-none"
+                    style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.1), transparent)" }}
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 4, repeat: Infinity, repeatDelay: 1 }}
+                  />
+                  <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }}>
+                    <Sparkles className="w-8 h-8 text-indigo-400 flex-shrink-0" />
+                  </motion.div>
+                  <div className="flex-1 relative">
+                    <p className="text-white font-semibold text-sm">Connect your wallet to buy and sell NFTs</p>
+                    <p className="text-slate-500 text-xs mt-0.5">You need MetaMask connected to Hardhat Local to interact with the marketplace.</p>
+                  </div>
+                  <ConnectWallet />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* NFT Grid */}
+            {/* Personalized recommendations */}
+            <RecommendedNFTs
+              NFTCard={NFTCard}
+              currentUserAccount={account}
+              onRefresh={fetchNFTs}
+              limit={6}
+            />
+
+            {/* All NFTs Grid */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
-                  {filter === "All" ? "All NFTs" : filter}
-                </h2>
+                <motion.h2
+                  className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <motion.span
+                    className="w-1.5 h-1.5 rounded-full bg-indigo-400"
+                    animate={{
+                      boxShadow: [
+                        "0 0 0px #a78bfa",
+                        "0 0 8px #a78bfa",
+                        "0 0 0px #a78bfa",
+                      ],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <span className="bg-gradient-to-r from-slate-300 to-slate-500 bg-clip-text text-transparent">
+                    {filter === "All" ? "All NFTs" : filter}
+                  </span>
+                </motion.h2>
                 {!loading && <span className="text-slate-600 text-xs">{filtered.length} items</span>}
               </div>
 
               {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="rounded-2xl overflow-hidden animate-pulse"
-                      style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div className="w-full h-44 bg-slate-800" />
+                    <motion.div key={i}
+                      className="rounded-2xl overflow-hidden"
+                      style={{
+                        background: "rgba(19,19,42,0.7)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(167,139,250,0.1)",
+                      }}
+                      animate={{ opacity: [0.4, 0.7, 0.4] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}>
+                      <div className="w-full h-44 bg-slate-800/40" />
                       <div className="p-4 space-y-2">
-                        <div className="h-4 bg-slate-800 rounded w-3/4" />
-                        <div className="h-3 bg-slate-800 rounded w-1/2" />
+                        <div className="h-4 bg-slate-800/40 rounded w-3/4" />
+                        <div className="h-3 bg-slate-800/40 rounded w-1/2" />
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="text-center py-16 rounded-2xl"
-                  style={{ background: "#13132a", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <Sparkles className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-                  <p className="text-slate-500 text-sm mb-1">
+                <motion.div className="text-center py-16 rounded-2xl relative overflow-hidden"
+                  style={{
+                    background: "rgba(19,19,42,0.6)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(167,139,250,0.1)",
+                  }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}>
+                  <motion.div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 relative"
+                    style={{ background: "rgba(99,102,241,0.1)" }}
+                    animate={{
+                      boxShadow: [
+                        "0 0 16px rgba(124,58,237,0.2)",
+                        "0 0 32px rgba(124,58,237,0.4)",
+                        "0 0 16px rgba(124,58,237,0.2)",
+                      ],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Sparkles className="w-7 h-7 text-indigo-400" />
+                  </motion.div>
+                  <p className="text-slate-400 text-sm mb-1 font-semibold">
                     {nftMemories.length === 0 ? "No NFTs minted yet" : "No NFTs match your filter"}
                   </p>
                   {nftMemories.length === 0 && (
-                    <p className="text-slate-700 text-xs">Go to your feed and mint a memory as NFT first</p>
+                    <p className="text-slate-600 text-xs">Go to your feed and mint a memory as NFT first</p>
                   )}
-                </div>
+                </motion.div>
               ) : (
                 <motion.div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
                   initial="hidden" animate="visible"
                   variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } }}>
                   {filtered.map((memory) => (
-                    <NFTCard key={memory._id} memory={memory}
-                      currentUserAccount={account} onRefresh={fetchNFTs} />
+                    <NFTCard key={memory._id} memory={memory} onRefresh={fetchNFTs} />
                   ))}
                 </motion.div>
               )}
@@ -543,26 +764,7 @@ const Marketplace = () => {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 border-t border-white/[0.05] px-2 py-2 z-50"
-        style={{ background: "#0d0d1a" }}>
-        <div className="flex items-center justify-around max-w-sm mx-auto">
-          {[
-            { icon: HomeIcon, path: "/" },
-            { icon: Search, path: "/search" },
-            { icon: Plus, path: "/create", fab: true },
-            { icon: Bell, path: "/notifications" },
-            { icon: UserIcon, path: "/profile" },
-          ].map(({ icon: Icon, path, fab }) => (
-            <button key={path} onClick={() => navigate(path)}
-              className={fab
-                ? "w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg"
-                : `p-2.5 rounded-xl transition-colors ${location.pathname === path ? "text-indigo-400 bg-indigo-400/10" : "text-slate-500 hover:text-white"}`}>
-              <Icon className="w-5 h-5" />
-            </button>
-          ))}
-        </div>
-      </nav>
+      <MobileBottomNav />
     </div>
   );
 };

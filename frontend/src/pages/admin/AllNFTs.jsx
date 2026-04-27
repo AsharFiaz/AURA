@@ -1,21 +1,14 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../utils/api";
 import { showError, showSuccess } from "../../utils/toast";
 import {
-  ShoppingBag,
-  ArrowLeft,
-  Search,
-  Calendar,
-  Heart,
-  Eye,
-  Trash2,
-  User,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
+  ShoppingBag, Search, Calendar, Heart, Eye, Trash2,
+  ChevronLeft, ChevronRight, Sparkles,
 } from "lucide-react";
+import AnimatedBackdrop from "../../components/common/AnimatedBackdrop";
+import AdminNav from "../../components/common/AdminNav";
 
 const AllNFTs = () => {
   const navigate = useNavigate();
@@ -23,17 +16,11 @@ const AllNFTs = () => {
   const [nfts, setNfts] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    pages: 1,
-    hasMore: false,
+    page: 1, limit: 20, total: 0, pages: 1, hasMore: false,
   });
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchNFTs();
-  }, [page]);
+  useEffect(() => { fetchNFTs(); }, [page]);
 
   const fetchNFTs = async () => {
     try {
@@ -55,32 +42,19 @@ const AllNFTs = () => {
   };
 
   const handleDeleteNFT = async (nftId) => {
-    if (!window.confirm("Are you sure you want to delete this NFT?")) {
-      return;
-    }
-
+    if (!window.confirm("Are you sure you want to delete this NFT?")) return;
     try {
       const response = await api.delete(`/admin/memories/${nftId}`);
-      if (response.data.success) {
-        showSuccess("NFT deleted successfully");
-        fetchNFTs(); // Refresh list
-      }
+      if (response.data.success) { showSuccess("NFT deleted successfully"); fetchNFTs(); }
     } catch (error) {
       console.error("Error deleting NFT:", error);
       showError("Failed to delete NFT");
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
 
   const filteredNFTs = nfts.filter(
     (nft) =>
@@ -90,215 +64,243 @@ const AllNFTs = () => {
 
   if (loading && nfts.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <motion.div
-          className="text-white text-xl"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-        >
-          Loading NFTs...
+      <div className="min-h-screen flex items-center justify-center relative">
+        <AnimatedBackdrop />
+        <motion.div className="flex flex-col items-center gap-3 relative"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <div className="relative w-12 h-12">
+            <motion.div className="absolute inset-0 rounded-full border-4 border-t-transparent border-pink-500"
+              animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
+          </div>
+          <span className="text-slate-400 text-sm">Loading NFTs…</span>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Top Navbar */}
-      <motion.nav
-        className="bg-slate-900/80 backdrop-blur-lg border-b border-white/10 px-6 py-4"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-      >
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <motion.button
-              onClick={() => navigate("/admin/dashboard")}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ArrowLeft className="w-6 h-6 text-white" />
-            </motion.button>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
-              <Sparkles className="w-8 h-8 text-pink-400" />
-              All NFTs Listed
-            </h1>
-          </div>
-        </div>
-      </motion.nav>
+    <div className="min-h-screen text-white relative">
+      <AnimatedBackdrop />
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Search Bar */}
-        <motion.div
-          className="mb-6"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+      <AdminNav title="All NFTs Listed" icon={Sparkles} showBack />
+
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6 relative">
+
+        {/* Search */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search NFTs by caption or username..."
+              placeholder="Search NFTs by caption or username…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none transition-all"
+              style={{
+                background: "rgba(19,19,42,0.7)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(236,72,153,0.15)",
+              }}
+              onFocus={e => { e.target.style.borderColor = "rgba(236,72,153,0.5)"; e.target.style.boxShadow = "0 0 16px rgba(236,72,153,0.2)"; }}
+              onBlur={e => { e.target.style.borderColor = "rgba(236,72,153,0.15)"; e.target.style.boxShadow = "none"; }}
             />
           </div>
         </motion.div>
 
-        {/* Stats Card */}
-        <motion.div
-          className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        {/* Stats */}
+        <motion.div className="rounded-2xl p-6 relative overflow-hidden"
+          style={{
+            background: "rgba(19,19,42,0.7)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(236,72,153,0.15)",
+          }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+
+          <motion.div
+            className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-pink-400"
+            animate={{ boxShadow: ["0 0 0px #f472b6", "0 0 12px #f472b6", "0 0 0px #f472b6"] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center">
+            <motion.div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center"
+              animate={{ boxShadow: ["0 0 16px rgba(236,72,153,0.3)", "0 0 32px rgba(236,72,153,0.5)", "0 0 16px rgba(236,72,153,0.3)"] }}
+              transition={{ duration: 2.5, repeat: Infinity }}>
               <ShoppingBag className="w-6 h-6 text-white" />
-            </div>
+            </motion.div>
             <div>
-              <h3 className="text-slate-400 text-sm">Total NFTs Listed</h3>
-              <p className="text-3xl font-bold text-white">{pagination.total}</p>
+              <h3 className="text-slate-500 text-xs uppercase tracking-widest mb-0.5">Total NFTs Listed</h3>
+              <motion.p className="text-3xl font-bold text-white"
+                initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, delay: 0.2 }}>
+                {pagination.total}
+              </motion.p>
             </div>
           </div>
         </motion.div>
 
-        {/* NFTs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          {filteredNFTs.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-slate-400">
-              No NFTs found
-            </div>
-          ) : (
-            filteredNFTs.map((nft, index) => (
-              <motion.div
-                key={nft._id || nft.id}
-                className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 overflow-hidden relative"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                {/* NFT Badge */}
-                <div className="absolute top-2 right-2 z-10">
-                  <div className="px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-white" />
-                    <span className="text-white text-xs font-semibold">NFT</span>
-                  </div>
-                </div>
-
-                {/* NFT Image */}
-                {nft.image && (
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={nft.image}
-                      alt={nft.caption || "NFT"}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-
-                {/* NFT Content */}
-                <div className="p-4">
-                  {/* User Info */}
-                  <motion.div 
-                    className="flex items-center gap-3 mb-3 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => navigate(`/user/${nft.user?._id || nft.user?.id}`)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-semibold">
-                      {nft.user?.username?.charAt(0).toUpperCase() || "U"}
+        {/* NFT grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <AnimatePresence>
+            {filteredNFTs.length === 0 ? (
+              <div className="col-span-full text-center py-16 text-slate-500 text-sm rounded-2xl"
+                style={{
+                  background: "rgba(19,19,42,0.5)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(236,72,153,0.1)",
+                }}>
+                No NFTs found
+              </div>
+            ) : (
+              filteredNFTs.map((nft, index) => (
+                <motion.div
+                  key={nft._id || nft.id}
+                  className="rounded-2xl overflow-hidden relative group"
+                  style={{
+                    background: "rgba(19,19,42,0.7)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(236,72,153,0.15)",
+                  }}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                  whileHover={{ y: -4, borderColor: "rgba(236,72,153,0.5)", boxShadow: "0 8px 32px rgba(236,72,153,0.25)" }}
+                >
+                  <motion.div className="absolute top-2 right-2 z-10"
+                    animate={{ y: [0, -2, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}>
+                    <div className="px-3 py-1 rounded-full flex items-center gap-1"
+                      style={{
+                        background: "linear-gradient(135deg, #ec4899, #7c3aed)",
+                        boxShadow: "0 4px 16px rgba(236,72,153,0.4)",
+                      }}>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}>
+                        <Sparkles className="w-3 h-3 text-white" />
+                      </motion.div>
+                      <span className="text-white text-xs font-bold uppercase tracking-widest">NFT</span>
                     </div>
-                    <span className="text-white text-sm font-medium">
-                      {nft.user?.username || "Unknown"}
-                    </span>
                   </motion.div>
 
-                  {/* Caption */}
-                  <p className="text-slate-300 text-sm mb-3 line-clamp-2">
-                    {nft.caption || "No caption"}
-                  </p>
-
-                  {/* Emotions */}
-                  {nft.emotions && nft.emotions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {nft.emotions.slice(0, 3).map((emotion, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/50"
-                        >
-                          {emotion}
-                        </span>
-                      ))}
+                  {nft.image && (
+                    <div className="relative h-48 overflow-hidden">
+                      <motion.img
+                        src={nft.image}
+                        alt={nft.caption || "NFT"}
+                        className="w-full h-full object-cover"
+                        whileHover={{ scale: 1.06 }}
+                        transition={{ duration: 0.4 }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                     </div>
                   )}
 
-                  {/* Stats */}
-                  <div className="flex items-center justify-between text-slate-400 text-xs mb-3">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4" />
-                      <span>{nft.likesCount || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{formatDate(nft.createdAt).split(",")[0]}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-white/10">
-                    <motion.button
+                  <div className="p-4">
+                    <motion.div
+                      className="flex items-center gap-3 mb-3 cursor-pointer"
                       onClick={() => navigate(`/user/${nft.user?._id || nft.user?.id}`)}
-                      className="flex-1 px-3 py-2 bg-blue-500/20 border border-blue-500/50 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors text-sm flex items-center justify-center gap-2"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ x: 2 }}
                     >
-                      <Eye className="w-4 h-4" />
-                      View
-                    </motion.button>
-                    <motion.button
-                      onClick={() => handleDeleteNFT(nft._id || nft.id)}
-                      className="px-3 py-2 bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
+                      <motion.div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold"
+                        whileHover={{ scale: 1.1, boxShadow: "0 0 12px rgba(236,72,153,0.5)" }}>
+                        {nft.user?.username?.charAt(0).toUpperCase() || "U"}
+                      </motion.div>
+                      <span className="text-white text-sm font-medium">
+                        {nft.user?.username || "Unknown"}
+                      </span>
+                    </motion.div>
+
+                    <p className="text-slate-300 text-sm mb-3 line-clamp-2">
+                      {nft.caption || "No caption"}
+                    </p>
+
+                    {nft.emotions && nft.emotions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {nft.emotions.slice(0, 3).map((emotion, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 text-xs rounded-full text-pink-300"
+                            style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.25)" }}
+                          >
+                            {emotion}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-slate-500 text-xs mb-3">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5" />
+                        <span>{nft.likesCount || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{formatDate(nft.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-3"
+                      style={{ borderTop: "1px solid rgba(236,72,153,0.1)" }}>
+                      <motion.button
+                        onClick={() => navigate(`/user/${nft.user?._id || nft.user?.id}`)}
+                        className="flex-1 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors"
+                        style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}
+                        whileHover={{ scale: 1.04, background: "rgba(99,102,241,0.25)" }}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View
+                      </motion.button>
+                      <motion.button
+                        onClick={() => handleDeleteNFT(nft._id || nft.id)}
+                        className="px-3 py-2 rounded-lg transition-colors"
+                        style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}
+                        whileHover={{ scale: 1.08, background: "rgba(239,68,68,0.2)" }}
+                        whileTap={{ scale: 0.92 }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))
-          )}
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <motion.div
-            className="flex items-center justify-between"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <button
+          <motion.div className="flex items-center justify-between"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <motion.button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: "rgba(19,19,42,0.7)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(236,72,153,0.15)",
+              }}
+              whileHover={page > 1 ? { x: -2, borderColor: "rgba(236,72,153,0.4)" } : {}}
+              whileTap={page > 1 ? { scale: 0.97 } : {}}
             >
-              <ChevronLeft className="w-5 h-5" />
-              Previous
-            </button>
-            <span className="text-slate-300">
-              Page {pagination.page} of {pagination.pages}
+              <ChevronLeft className="w-4 h-4" /> Previous
+            </motion.button>
+            <span className="text-slate-400 text-sm">
+              Page <span className="text-white font-semibold">{pagination.page}</span> of {pagination.pages}
             </span>
-            <button
+            <motion.button
               onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
               disabled={!pagination.hasMore}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: "rgba(19,19,42,0.7)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(236,72,153,0.15)",
+              }}
+              whileHover={pagination.hasMore ? { x: 2, borderColor: "rgba(236,72,153,0.4)" } : {}}
+              whileTap={pagination.hasMore ? { scale: 0.97 } : {}}
             >
-              Next
-              <ChevronRight className="w-5 h-5" />
-            </button>
+              Next <ChevronRight className="w-4 h-4" />
+            </motion.button>
           </motion.div>
         )}
       </div>
@@ -307,4 +309,3 @@ const AllNFTs = () => {
 };
 
 export default AllNFTs;
-

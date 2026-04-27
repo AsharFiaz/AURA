@@ -8,7 +8,7 @@ load_dotenv()
 def vector_db_recommend(
     user_vector: np.ndarray,
     balance_vector: np.ndarray = np.array([0.5, 0.5, 0.5, 0.5, 0.5]),
-    top_k: int = 20,                  # fetch more so Node.js has enough IDs
+    top_k: int = 10,                  # fetch more so Node.js has enough IDs
     min_user_dist: float = 0.05,
     collection_name: str = "ocean"
 ):
@@ -46,5 +46,5 @@ def vector_db_recommend(
                 "user_distance": float(user_dist),
             })
 
-    filtered_candidates.sort(key=lambda x: x["trait_score"], reverse=True)
+    filtered_candidates.sort(key=lambda x: x["trait_score"])
     return filtered_candidates[:top_k]

@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
-import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import AnimatedBackdrop from "../components/common/AnimatedBackdrop";
+import { ChevronRight, ChevronLeft, CheckCircle2, Sparkles, Brain } from "lucide-react";
 
 const QUESTIONS = [
     { id: "1", text: "Enjoy engaging with complex ideas and advanced vocabulary", keyed: "plus", domain: "O" },
@@ -29,22 +30,17 @@ const QUESTIONS = [
 ];
 
 const LABELS = [
-    { short: "Strongly\nNo", full: "Very inaccurate" },
-    { short: "Mostly\nNo", full: "Moderately inaccurate" },
-    { short: "Neutral", full: "Neither" },
-    { short: "Mostly\nYes", full: "Moderately accurate" },
-    { short: "Strongly\nYes", full: "Very accurate" },
+    { short: "Strongly\nNo" }, { short: "Mostly\nNo" }, { short: "Neutral" }, { short: "Mostly\nYes" }, { short: "Strongly\nYes" },
 ];
 
 const TRAIT_INFO = {
-    O: { label: "Openness", color: "from-violet-500 to-purple-600", ring: "ring-violet-500/40", bg: "rgba(139,92,246,0.15)", text: "text-violet-300", dot: "bg-violet-400" },
-    C: { label: "Conscientiousness", color: "from-blue-500 to-blue-600", ring: "ring-blue-500/40", bg: "rgba(59,130,246,0.15)", text: "text-blue-300", dot: "bg-blue-400" },
-    E: { label: "Extraversion", color: "from-yellow-500 to-orange-500", ring: "ring-yellow-500/40", bg: "rgba(234,179,8,0.15)", text: "text-yellow-300", dot: "bg-yellow-400" },
-    A: { label: "Agreeableness", color: "from-green-500 to-emerald-600", ring: "ring-green-500/40", bg: "rgba(16,185,129,0.15)", text: "text-green-300", dot: "bg-green-400" },
-    N: { label: "Neuroticism", color: "from-red-500 to-pink-600", ring: "ring-red-500/40", bg: "rgba(239,68,68,0.15)", text: "text-red-300", dot: "bg-red-400" },
+    O: { label: "Openness", color: "from-violet-500 to-purple-600", text: "text-violet-300", dot: "bg-violet-400", bg: "rgba(167,139,250,0.15)" },
+    C: { label: "Conscientiousness", color: "from-indigo-500 to-blue-600", text: "text-indigo-300", dot: "bg-indigo-400", bg: "rgba(129,140,248,0.15)" },
+    E: { label: "Extraversion", color: "from-amber-500 to-orange-500", text: "text-amber-300", dot: "bg-amber-400", bg: "rgba(251,191,36,0.15)" },
+    A: { label: "Agreeableness", color: "from-emerald-500 to-green-600", text: "text-emerald-300", dot: "bg-emerald-400", bg: "rgba(52,211,153,0.15)" },
+    N: { label: "Neuroticism", color: "from-red-500 to-pink-600", text: "text-red-300", dot: "bg-red-400", bg: "rgba(248,113,113,0.15)" },
 };
 
-// Show 4 questions per "page" so it feels like steps
 const PAGE_SIZE = 4;
 const TOTAL_PAGES = Math.ceil(QUESTIONS.length / PAGE_SIZE);
 
@@ -52,18 +48,15 @@ function computeOCEAN(answers) {
     const sums = { O: 0, C: 0, E: 0, A: 0, N: 0 };
     const counts = { O: 0, C: 0, E: 0, A: 0, N: 0 };
     QUESTIONS.forEach(q => {
-        const raw = answers[q.id];
-        if (!raw) return;
+        const raw = answers[q.id]; if (!raw) return;
         let val = parseInt(raw);
         if (q.keyed === "minus") val = 6 - val;
-        sums[q.domain] += val;
-        counts[q.domain] += 1;
+        sums[q.domain] += val; counts[q.domain]++;
     });
     const result = {};
     for (const d in sums) {
         if (!counts[d]) { result[d] = null; continue; }
-        const mean = sums[d] / counts[d];
-        result[d] = Math.round(((mean - 1) / 4) * 1000) / 1000;
+        result[d] = Math.round(((sums[d] / counts[d] - 1) / 4) * 1000) / 1000;
     }
     return result;
 }
@@ -72,21 +65,18 @@ const PersonalityOnboarding = () => {
     const [answers, setAnswers] = useState({});
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(0);  // current page index
-    const { user, refreshUser } = useAuth();
+    const [page, setPage] = useState(0);
+    const { refreshUser } = useAuth();
     const navigate = useNavigate();
 
     const answered = Object.keys(answers).length;
     const allAnswered = answered === QUESTIONS.length;
     const progress = Math.round((answered / QUESTIONS.length) * 100);
-
     const pageQuestions = QUESTIONS.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
     const pageAnswered = pageQuestions.every(q => answers[q.id]);
     const isLastPage = page === TOTAL_PAGES - 1;
 
-    const handleAnswer = (qId, val) => {
-        setAnswers(prev => ({ ...prev, [qId]: val }));
-    };
+    const handleAnswer = (qId, val) => setAnswers(prev => ({ ...prev, [qId]: val }));
 
     const handleNext = () => {
         if (!pageAnswered) { setError("Please answer all questions on this page."); return; }
@@ -110,40 +100,46 @@ const PersonalityOnboarding = () => {
     };
 
     return (
-        <div className="min-h-screen flex text-white" style={{ background: "#0d0d1a" }}>
+        <div className="min-h-screen flex text-white relative">
+            <AnimatedBackdrop />
+
             {/* Left panel */}
             <div className="hidden lg:flex flex-col justify-between w-[38%] p-12 relative overflow-hidden"
-                style={{ background: "#0a0a1a", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
-                {/* Glow orbs */}
-                <div className="absolute top-1/3 left-1/4 w-72 h-72 rounded-full pointer-events-none"
-                    style={{ background: "radial-gradient(circle,rgba(99,102,241,0.12),transparent 70%)" }} />
-                <div className="absolute bottom-1/4 right-1/4 w-52 h-52 rounded-full pointer-events-none"
-                    style={{ background: "radial-gradient(circle,rgba(139,92,246,0.08),transparent 70%)" }} />
+                style={{ borderRight: "1px solid rgba(167,139,250,0.1)", background: "rgba(10,10,20,0.4)", backdropFilter: "blur(10px)" }}>
 
-                {/* Logo */}
-                <span className="text-3xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">AURA</span>
+                <motion.div className="flex items-center gap-3"
+                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                    <motion.div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg, #7c3aed, #ec4899)" }}
+                        animate={{ boxShadow: ["0 0 20px rgba(124,58,237,0.3)", "0 0 40px rgba(124,58,237,0.6)", "0 0 20px rgba(124,58,237,0.3)"] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                    >
+                        <Brain className="w-5 h-5 text-white" />
+                    </motion.div>
+                    <span className="text-3xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">AURA</span>
+                </motion.div>
 
-                {/* Center content */}
-                <div>
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
                     <p className="text-slate-500 text-xs uppercase tracking-widest mb-3 font-medium">OCEAN Model</p>
                     <h2 className="text-3xl font-bold text-white leading-tight mb-5">
                         Build your<br />
-                        <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">personality profile.</span>
+                        <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">personality profile.</span>
                     </h2>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                    <p className="text-slate-400 text-sm leading-relaxed mb-8">
                         20 quick questions based on the Big Five personality model. Your answers help AURA surface memories that resonate with who you are.
                     </p>
 
-                    {/* Trait pills */}
                     <div className="flex flex-col gap-2.5">
                         {Object.entries(TRAIT_INFO).map(([key, t]) => {
-                            // count how many of this domain are answered
                             const domainQs = QUESTIONS.filter(q => q.domain === key);
                             const domainAnswered = domainQs.filter(q => answers[q.id]).length;
                             const pct = Math.round((domainAnswered / domainQs.length) * 100);
                             return (
                                 <div key={key} className="flex items-center gap-3">
-                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.dot}`} />
+                                    <motion.div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.dot}`}
+                                        animate={pct > 0 ? { boxShadow: [`0 0 0px currentColor`, `0 0 8px currentColor`, `0 0 0px currentColor`] } : {}}
+                                        transition={{ duration: 2, repeat: Infinity }} />
                                     <div className="flex-1">
                                         <div className="flex justify-between mb-1">
                                             <span className={`text-xs font-medium ${t.text}`}>{key} · {t.label}</span>
@@ -158,53 +154,47 @@ const PersonalityOnboarding = () => {
                             );
                         })}
                     </div>
-                </div>
+                </motion.div>
 
-                {/* Progress */}
                 <div>
                     <div className="flex justify-between text-xs text-slate-600 mb-1.5">
                         <span>{answered} of {QUESTIONS.length} answered</span>
                         <span>{progress}%</span>
                     </div>
                     <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                        <motion.div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                        <motion.div className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500"
                             animate={{ width: `${progress}%` }} transition={{ duration: 0.4 }} />
                     </div>
                 </div>
             </div>
 
-            {/* Right — questions panel */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Top bar */}
+            {/* Right panel */}
+            <div className="flex-1 flex flex-col overflow-hidden relative">
                 <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    {/* Mobile logo */}
+                    style={{ borderBottom: "1px solid rgba(167,139,250,0.1)", background: "rgba(10,10,20,0.4)", backdropFilter: "blur(10px)" }}>
                     <span className="lg:hidden text-lg font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">AURA</span>
 
-                    {/* Page indicator */}
                     <div className="flex items-center gap-1.5 lg:ml-0 ml-auto">
                         {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
-                            <div key={i} className="h-1.5 rounded-full transition-all duration-300"
+                            <motion.div key={i} className="h-1.5 rounded-full transition-all duration-300"
                                 style={{
                                     width: i === page ? "24px" : "8px",
                                     background: i <= page ? "linear-gradient(90deg,#4f46e5,#7c3aed)" : "rgba(255,255,255,0.1)",
+                                    boxShadow: i === page ? "0 0 8px rgba(124,58,237,0.6)" : "none",
                                 }} />
                         ))}
                     </div>
 
-                    {/* Step label */}
-                    <span className="text-slate-600 text-xs ml-3">Step {page + 1} of {TOTAL_PAGES}</span>
+                    <span className="text-slate-500 text-xs ml-3">Step {page + 1} of {TOTAL_PAGES}</span>
                 </div>
 
-                {/* Questions */}
                 <div className="flex-1 overflow-y-auto px-6 py-6" style={{ scrollbarWidth: "none" }}>
-                    {/* Mobile progress */}
                     <div className="lg:hidden mb-5">
                         <div className="flex justify-between text-xs text-slate-600 mb-1.5">
                             <span>{answered}/{QUESTIONS.length} answered</span><span>{progress}%</span>
                         </div>
                         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                            <motion.div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                            <motion.div className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500"
                                 animate={{ width: `${progress}%` }} transition={{ duration: 0.4 }} />
                         </div>
                     </div>
@@ -218,24 +208,30 @@ const PersonalityOnboarding = () => {
                                 const selected = answers[q.id];
                                 return (
                                     <motion.div key={q.id}
-                                        className="rounded-2xl p-4 transition-all"
+                                        className="rounded-2xl p-4 transition-all relative overflow-hidden"
                                         style={{
-                                            background: selected ? trait.bg : "#13132a",
-                                            border: selected ? `1px solid rgba(255,255,255,0.1)` : "1px solid rgba(255,255,255,0.05)",
+                                            background: selected ? trait.bg : "rgba(19,19,42,0.7)",
+                                            backdropFilter: "blur(10px)",
+                                            border: selected ? "1px solid rgba(167,139,250,0.3)" : "1px solid rgba(167,139,250,0.1)",
+                                            boxShadow: selected ? "0 0 16px rgba(124,58,237,0.15)" : "none",
                                         }}
                                         initial={{ opacity: 0, y: 12 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.06 }}
                                     >
                                         <div className="flex items-start gap-3 mb-4">
-                                            <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br ${trait.color}`}>
+                                            <motion.span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br ${trait.color}`}
+                                                whileHover={{ scale: 1.1 }}>
                                                 {page * PAGE_SIZE + i + 1}
-                                            </span>
+                                            </motion.span>
                                             <p className="text-slate-200 text-sm leading-relaxed pt-0.5">{q.text}</p>
-                                            {selected && <CheckCircle2 className={`w-4 h-4 flex-shrink-0 mt-0.5 ${trait.text}`} />}
+                                            {selected && (
+                                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300 }}>
+                                                    <CheckCircle2 className={`w-4 h-4 flex-shrink-0 mt-0.5 ${trait.text}`} />
+                                                </motion.div>
+                                            )}
                                         </div>
 
-                                        {/* Answer buttons */}
                                         <div className="grid grid-cols-5 gap-1.5">
                                             {LABELS.map((label, idx) => {
                                                 const val = String(idx + 1);
@@ -245,15 +241,15 @@ const PersonalityOnboarding = () => {
                                                         onClick={() => handleAnswer(q.id, val)}
                                                         className="py-2.5 px-1 rounded-xl text-center transition-all"
                                                         style={{
-                                                            background: isSelected ? undefined : "rgba(255,255,255,0.04)",
-                                                            border: isSelected ? "1px solid transparent" : "1px solid rgba(255,255,255,0.07)",
-                                                            backgroundImage: isSelected ? `linear-gradient(#13132a,#13132a),linear-gradient(135deg,var(--tw-gradient-from),var(--tw-gradient-to))` : undefined,
+                                                            background: isSelected ? trait.bg : "rgba(255,255,255,0.04)",
+                                                            border: isSelected ? "1px solid rgba(167,139,250,0.4)" : "1px solid rgba(255,255,255,0.07)",
                                                         }}
-                                                        whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                                                        whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
                                                     >
                                                         {isSelected ? (
-                                                            <div className={`flex flex-col items-center gap-0.5`}>
-                                                                <div className={`w-2 h-2 rounded-full bg-gradient-to-br ${trait.color}`} />
+                                                            <div className="flex flex-col items-center gap-0.5">
+                                                                <motion.div className={`w-2 h-2 rounded-full bg-gradient-to-br ${trait.color}`}
+                                                                    initial={{ scale: 0 }} animate={{ scale: 1 }} />
                                                                 <span className={`text-[10px] font-semibold ${trait.text} whitespace-pre-line leading-tight`}>{label.short}</span>
                                                             </div>
                                                         ) : (
@@ -270,9 +266,8 @@ const PersonalityOnboarding = () => {
                     </AnimatePresence>
                 </div>
 
-                {/* Footer */}
-                <div className="flex-shrink-0 px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                    {/* Error */}
+                <div className="flex-shrink-0 px-6 py-4"
+                    style={{ borderTop: "1px solid rgba(167,139,250,0.1)", background: "rgba(10,10,20,0.4)", backdropFilter: "blur(10px)" }}>
                     <AnimatePresence>
                         {error && (
                             <motion.p className="text-red-400 text-xs mb-3 text-center"
@@ -283,35 +278,47 @@ const PersonalityOnboarding = () => {
                     </AnimatePresence>
 
                     <div className="flex items-center gap-3">
-                        {/* Back button */}
-                        <button onClick={() => { setPage(p => p - 1); setError(""); }}
+                        <motion.button onClick={() => { setPage(p => p - 1); setError(""); }}
                             disabled={page === 0}
                             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium"
-                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(167,139,250,0.1)" }}
+                            whileHover={page > 0 ? { x: -2, borderColor: "rgba(167,139,250,0.3)" } : {}}
+                            whileTap={page > 0 ? { scale: 0.97 } : {}}>
                             <ChevronLeft className="w-4 h-4" /> Back
-                        </button>
+                        </motion.button>
 
-                        {/* Next / Submit */}
                         <motion.button onClick={handleNext}
                             disabled={loading}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50"
-                            style={{ background: pageAnswered ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "rgba(99,102,241,0.25)", boxShadow: pageAnswered ? "0 4px 20px rgba(79,70,229,0.3)" : "none" }}
-                            whileHover={pageAnswered && !loading ? { scale: 1.02 } : {}}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50 relative overflow-hidden"
+                            style={{
+                                background: pageAnswered ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "rgba(99,102,241,0.25)",
+                                boxShadow: pageAnswered ? "0 4px 20px rgba(79,70,229,0.4)" : "none",
+                            }}
+                            whileHover={pageAnswered && !loading ? { scale: 1.02, boxShadow: "0 4px 32px rgba(124,58,237,0.6)" } : {}}
                             whileTap={pageAnswered && !loading ? { scale: 0.98 } : {}}
                         >
-                            {loading ? (
-                                <><motion.div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                                    animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
-                                    Saving…</>
-                            ) : isLastPage ? (
-                                <><CheckCircle2 className="w-4 h-4" /> Enter AURA</>
-                            ) : (
-                                <>Next <ChevronRight className="w-4 h-4" /></>
+                            {pageAnswered && !loading && (
+                                <motion.div
+                                    className="absolute inset-0"
+                                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+                                    animate={{ x: ["-100%", "100%"] }}
+                                    transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1 }}
+                                />
                             )}
+                            <span className="relative flex items-center gap-2">
+                                {loading ? (
+                                    <><motion.div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                                        animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
+                                        Saving…</>
+                                ) : isLastPage ? (
+                                    <><Sparkles className="w-4 h-4" /> Enter AURA</>
+                                ) : (
+                                    <>Next <ChevronRight className="w-4 h-4" /></>
+                                )}
+                            </span>
                         </motion.button>
                     </div>
 
-                    {/* Bottom hint */}
                     <p className="text-slate-700 text-xs text-center mt-3">
                         {answered}/{QUESTIONS.length} answered · Page {page + 1}/{TOTAL_PAGES}
                     </p>
