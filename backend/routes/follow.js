@@ -10,7 +10,6 @@ router.post('/:userId', auth, async (req, res) => {
     const { userId } = req.params;
     const currentUserId = req.user.id;
 
-    // Check if trying to follow self
     if (currentUserId === userId) {
       return res.status(400).json({
         success: false,
@@ -18,37 +17,23 @@ router.post('/:userId', auth, async (req, res) => {
       });
     }
 
-    // Find target user
     const targetUser = await User.findById(userId);
     if (!targetUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Find current user
     const currentUser = await User.findById(currentUserId);
     if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'Current user not found',
-      });
+      return res.status(404).json({ success: false, message: 'Current user not found' });
     }
 
-    // Check if already following
     if (currentUser.following.includes(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Already following this user',
-      });
+      return res.status(400).json({ success: false, message: 'Already following this user' });
     }
 
-    // Add to following and followers arrays
     currentUser.following.push(userId);
     targetUser.followers.push(currentUserId);
 
-    // Save both users
     await currentUser.save();
     await targetUser.save();
 
@@ -58,10 +43,7 @@ router.post('/:userId', auth, async (req, res) => {
       followingCount: currentUser.following.length,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -71,33 +53,19 @@ router.delete('/:userId', auth, async (req, res) => {
     const { userId } = req.params;
     const currentUserId = req.user.id;
 
-    // Find target user
     const targetUser = await User.findById(userId);
     if (!targetUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Find current user
     const currentUser = await User.findById(currentUserId);
     if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'Current user not found',
-      });
+      return res.status(404).json({ success: false, message: 'Current user not found' });
     }
 
-    // Remove from following and followers arrays
-    currentUser.following = currentUser.following.filter(
-      (id) => id.toString() !== userId
-    );
-    targetUser.followers = targetUser.followers.filter(
-      (id) => id.toString() !== currentUserId
-    );
+    currentUser.following = currentUser.following.filter((id) => id.toString() !== userId);
+    targetUser.followers = targetUser.followers.filter((id) => id.toString() !== currentUserId);
 
-    // Save both users
     await currentUser.save();
     await targetUser.save();
 
@@ -107,10 +75,7 @@ router.delete('/:userId', auth, async (req, res) => {
       followingCount: currentUser.following.length,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -122,71 +87,48 @@ router.get('/check/:userId', auth, async (req, res) => {
 
     const currentUser = await User.findById(currentUserId);
     if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const isFollowing = currentUser.following.some(
-      (id) => id.toString() === userId
-    );
+    const isFollowing = currentUser.following.some((id) => id.toString() === userId);
 
-    res.json({
-      success: true,
-      isFollowing,
-    });
+    res.json({ success: true, isFollowing });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// GET /api/follow/suggestions - Get suggested users to follow
+// GET /api/follow/suggestions - Get suggested users (NOW INCLUDES personality + profilePicture)
 router.get('/suggestions', auth, async (req, res) => {
   try {
     const currentUserId = req.user.id;
 
     const currentUser = await User.findById(currentUserId);
     if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Find users not in following array and not self
     const followingIds = currentUser.following.map((id) => id.toString());
     followingIds.push(currentUserId);
 
-    const suggestedUsers = await User.find({
-      _id: { $nin: followingIds },
-    })
-      .select('username email _id followers')
+    const suggestedUsers = await User.find({ _id: { $nin: followingIds } })
+      .select('username email _id followers personality profilePicture')
       .limit(10)
       .lean();
 
-    // Format response with followerCount
     const suggestions = suggestedUsers.map((user) => ({
       id: user._id,
       username: user.username,
       email: user.email,
       followerCount: user.followers?.length || 0,
+      personality: user.personality || { O: null, C: null, E: null, A: null, N: null },
+      profilePicture: user.profilePicture || null,
     }));
 
-    res.json({
-      success: true,
-      suggestions,
-    });
+    res.json({ success: true, suggestions });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
 module.exports = router;
-

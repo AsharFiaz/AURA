@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Share2, Sparkles, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -68,13 +68,11 @@ const MintModal = ({ memory, onClose }) => {
             </button>
           </div>
 
-          {/* Memory preview */}
           <div className="rounded-xl p-3 mb-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-slate-300 text-sm line-clamp-2">{memory.caption}</p>
             {memory.image && <img src={memory.image} alt="" className="w-full h-24 object-cover rounded-lg mt-2" />}
           </div>
 
-          {/* Success */}
           {mintedId && (
             <motion.div className="text-center py-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
               <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
@@ -90,7 +88,6 @@ const MintModal = ({ memory, onClose }) => {
             </motion.div>
           )}
 
-          {/* No wallet */}
           {!mintedId && !account && (
             <div className="text-center">
               <p className="text-slate-400 text-sm mb-4">Connect your wallet to mint this memory as an NFT.</p>
@@ -98,7 +95,6 @@ const MintModal = ({ memory, onClose }) => {
             </div>
           )}
 
-          {/* Not owner */}
           {!mintedId && account && !isOwner && (
             <div className="flex items-center gap-2 p-3 rounded-xl text-amber-300 text-sm"
               style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
@@ -107,7 +103,6 @@ const MintModal = ({ memory, onClose }) => {
             </div>
           )}
 
-          {/* Ready to mint */}
           {!mintedId && account && isOwner && (
             <>
               <div className="space-y-2 mb-5 text-xs text-slate-500">
@@ -139,7 +134,9 @@ const MintModal = ({ memory, onClose }) => {
 
 // ─── MemoryCard ───────────────────────────────────────────────────────────────
 const MemoryCard = memo(
-  ({ memory, index, onLike, onCommentClick, formatTime, getEmotionColor: getEmotionColorProp, isLiked }) => {
+  ({ memory, index, onLike, onCommentClick, formatTime, getEmotionColor: getEmotionColorProp, isLiked,
+    // ── Optional tracking props — only passed by Home.jsx
+    trackView, trackEvent }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [mintModalOpen, setMintModalOpen] = useState(false);
@@ -149,18 +146,95 @@ const MemoryCard = memo(
     const hasMedia = memory.image || memory.video;
     const isOwner = String(memory.user?._id || memory.user?.id) === String(user?.id);
     const alreadyMinted = !!memory.nftTokenId;
+    const memoryOwnerId = memory.user?._id || memory.user?.id;
 
-    const handleCommentClick = useCallback(() => onCommentClick(memory), [onCommentClick, memory]);
+    // ── View dwell tracking (Home feed only — only fires when trackView prop is passed) ──
+    const cardRef = useRef(null);
+    const visibleSinceRef = useRef(null);   // timestamp when card became >=60% visible
+    const accumulatedRef = useRef(0);       // total visible seconds across all visibility periods
+    const reportedRef = useRef(false);      // already reported a "full view" for this mount
+
+    useEffect(() => {
+      if (!trackView || !cardRef.current || isOwner) return undefined;
+
+      const node = cardRef.current;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          const visible = entry.isIntersecting && entry.intersectionRatio >= 0.6;
+          if (visible) {
+            if (visibleSinceRef.current == null) visibleSinceRef.current = Date.now();
+          } else {
+            // Just left view — accumulate elapsed
+            if (visibleSinceRef.current != null) {
+              accumulatedRef.current += (Date.now() - visibleSinceRef.current) / 1000;
+              visibleSinceRef.current = null;
+            }
+            // Fire a report once we've crossed the 3s threshold (don't re-fire per scroll)
+            if (!reportedRef.current && accumulatedRef.current >= 3) {
+              reportedRef.current = true;
+              trackView({
+                memoryId: memory._id,
+                dwellSeconds: accumulatedRef.current,
+                memoryOwnerId,
+              });
+            }
+          }
+        },
+        { threshold: [0, 0.6, 1] }
+      );
+
+      observer.observe(node);
+
+      return () => {
+        observer.disconnect();
+        // On unmount, finalize any in-progress visible period and report if not already
+        if (visibleSinceRef.current != null) {
+          accumulatedRef.current += (Date.now() - visibleSinceRef.current) / 1000;
+          visibleSinceRef.current = null;
+        }
+        if (!reportedRef.current && accumulatedRef.current > 0) {
+          // Even partial dwell is useful — let the formula handle the normalization
+          trackView({
+            memoryId: memory._id,
+            dwellSeconds: accumulatedRef.current,
+            memoryOwnerId,
+          });
+        }
+      };
+    }, [trackView, memory._id, memoryOwnerId, isOwner]);
+
+    // ── Wrapped action handlers — fire tracking before delegating to parent ──
+    const handleLikeClick = useCallback((id) => {
+      if (trackEvent && !isOwner) {
+        trackEvent({ memoryId: memory._id, type: "like", memoryOwnerId });
+      }
+      onLike(id);
+    }, [onLike, trackEvent, memory._id, memoryOwnerId, isOwner]);
+
+    const handleCommentClick = useCallback(() => {
+      if (trackEvent && !isOwner) {
+        trackEvent({ memoryId: memory._id, type: "comment", memoryOwnerId });
+      }
+      onCommentClick(memory);
+    }, [onCommentClick, memory, trackEvent, memoryOwnerId, isOwner]);
+
     const handleUserClick = useCallback((e) => {
       e.stopPropagation();
-      const memoryUserId = memory.user?._id || memory.user?.id;
-      if (memoryUserId && memoryUserId !== user?.id) navigate(`/user/${memoryUserId}`);
-      else if (memoryUserId === user?.id) navigate("/profile");
-    }, [memory, user, navigate]);
+      const memId = memory.user?._id || memory.user?.id;
+      if (memId && memId !== user?.id) {
+        if (trackEvent && !isOwner) {
+          trackEvent({ memoryId: memory._id, type: "profile_visit", memoryOwnerId });
+        }
+        navigate(`/user/${memId}`);
+      } else if (memId === user?.id) {
+        navigate("/profile");
+      }
+    }, [memory, user, navigate, trackEvent, memoryOwnerId, isOwner]);
 
     return (
       <>
         <motion.div
+          ref={cardRef}
           className="backdrop-blur-lg rounded-2xl border p-4 transition-all"
           style={{
             background: hasMedia
@@ -220,7 +294,7 @@ const MemoryCard = memo(
 
           {/* Actions */}
           <div className="flex items-center gap-4 pt-3" style={{ borderTop: `1px solid ${theme.border}` }}>
-            <LikeButton likesCount={memory.likesCount || 0} isLiked={isLiked(memory)} onLike={onLike} memoryId={memory._id} />
+            <LikeButton likesCount={memory.likesCount || 0} isLiked={isLiked(memory)} onLike={handleLikeClick} memoryId={memory._id} />
             <button onClick={handleCommentClick} className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
               <MessageCircle className="w-5 h-5" /><span className="text-sm">{memory.comments?.length || 0}</span>
             </button>
@@ -228,7 +302,6 @@ const MemoryCard = memo(
               <Share2 className="w-5 h-5" />
             </button>
 
-            {/* Mint NFT button — owner only, hidden if already minted */}
             {isOwner && !alreadyMinted && (
               <motion.button onClick={() => setMintModalOpen(true)}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white"
@@ -262,6 +335,7 @@ const MemoryCard = memo(
     if (prev.memory.nftTokenId !== next.memory.nftTokenId) return false;
     if (prev.index !== next.index) return false;
     if (JSON.stringify(prev.memory.oceanVector) !== JSON.stringify(next.memory.oceanVector)) return false;
+    // Tracking refs are stable across renders so no need to compare them
     return true;
   }
 );

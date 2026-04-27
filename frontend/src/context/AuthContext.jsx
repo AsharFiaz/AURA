@@ -31,7 +31,19 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // ── Trigger vector update before clearing the token ──────────────────────
+    // Best-effort: we don't block logout on this. If the server is down or
+    // the request fails, we still proceed with clearing local state.
+    try {
+      await Promise.race([
+        api.post("/interactions/flush"),
+        new Promise((resolve) => setTimeout(resolve, 2000)), // 2s ceiling
+      ]);
+    } catch {
+      /* swallow — never block logout */
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
