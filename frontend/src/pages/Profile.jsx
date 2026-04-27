@@ -12,7 +12,7 @@ import MobileTopBar from "../components/common/MobileTopBar";
 import MobileBottomNav from "../components/common/MobileBottomNav";
 import {
   Edit2, LogOut, Mail, User as UserIcon, Heart, Grid,
-  Sparkles, Trash2, Camera, X, BarChart2, Brain,
+  Sparkles, Trash2, Camera, X, BarChart2, Activity,
 } from "lucide-react";
 
 const TRAIT_INFO = {
@@ -23,7 +23,6 @@ const TRAIT_INFO = {
   N: { label: "Neuroticism", short: "N", color: "#f87171", track: "rgba(248,113,113,0.15)", desc: "Emotional sensitivity" },
 };
 
-// ─── Circular ring with glow effect ──────────────────────────────────────────
 const CircleRing = ({ score, traitKey, size = 88, strokeWidth = 7 }) => {
   const trait = TRAIT_INFO[traitKey];
   const pct = score !== null && score !== undefined ? Math.round(score * 100) : null;
@@ -88,7 +87,6 @@ const CircleRing = ({ score, traitKey, size = 88, strokeWidth = 7 }) => {
   );
 };
 
-// ─── Profile ──────────────────────────────────────────────────────────────────
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("memories");
   const [editMode, setEditMode] = useState(false);
@@ -177,7 +175,7 @@ const Profile = () => {
 
   const tabs = [
     { id: "memories", icon: <Grid className="w-4 h-4" />, label: "My Memories" },
-    { id: "personality", icon: <Brain className="w-4 h-4" />, label: "Personality" },
+    { id: "personality", icon: <Activity className="w-4 h-4" />, label: "Personality" },
     { id: "about", icon: <UserIcon className="w-4 h-4" />, label: "About" },
   ];
 
@@ -204,7 +202,6 @@ const Profile = () => {
         <BombasticSidebar />
 
         <main className="flex-1 min-w-0">
-          {/* Sticky page header */}
           <motion.div
             className="sticky top-[42px] z-40 px-6 py-4 flex items-center justify-between"
             style={{
@@ -240,7 +237,6 @@ const Profile = () => {
 
           <div className="max-w-4xl mx-auto px-4 lg:px-6 py-6 pb-24 lg:pb-8 space-y-4">
 
-            {/* Profile header card */}
             <motion.div
               className="rounded-2xl p-6 relative overflow-hidden"
               style={{
@@ -253,7 +249,6 @@ const Profile = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              {/* Animated edge shimmer */}
               <motion.div
                 className="absolute inset-0 opacity-30 pointer-events-none"
                 style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.06), transparent)" }}
@@ -262,7 +257,6 @@ const Profile = () => {
               />
 
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 relative">
-                {/* Avatar with rotating glow ring */}
                 <div className="relative group flex-shrink-0">
                   <motion.div
                     className="absolute inset-0 rounded-full"
@@ -337,7 +331,6 @@ const Profile = () => {
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 text-center sm:text-left">
                   <motion.h1
                     className="text-2xl font-bold bg-gradient-to-r from-white via-indigo-100 to-violet-200 bg-clip-text text-transparent mb-1"
@@ -377,7 +370,6 @@ const Profile = () => {
               </div>
             </motion.div>
 
-            {/* Stats */}
             <motion.div
               className="grid grid-cols-2 md:grid-cols-4 gap-3"
               initial="hidden"
@@ -430,7 +422,6 @@ const Profile = () => {
               ))}
             </motion.div>
 
-            {/* Edit form */}
             <AnimatePresence>
               {editMode && (
                 <motion.div
@@ -508,7 +499,6 @@ const Profile = () => {
               )}
             </AnimatePresence>
 
-            {/* Tabs */}
             <div className="flex gap-1 relative" style={{ borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
               {tabs.map(tab => (
                 <motion.button
@@ -532,10 +522,8 @@ const Profile = () => {
               ))}
             </div>
 
-            {/* Tab content */}
             <AnimatePresence mode="wait">
 
-              {/* ── Memories ── */}
               {activeTab === "memories" && (
                 <motion.div
                   key="memories"
@@ -654,7 +642,6 @@ const Profile = () => {
                 </motion.div>
               )}
 
-              {/* ── Personality ── */}
               {activeTab === "personality" && (
                 <motion.div
                   key="personality"
@@ -674,7 +661,6 @@ const Profile = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                     >
-                      {/* Animated edge shimmer */}
                       <motion.div
                         className="absolute inset-0 opacity-30 pointer-events-none"
                         style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.06), transparent)" }}
@@ -682,7 +668,6 @@ const Profile = () => {
                         transition={{ duration: 5, repeat: Infinity, repeatDelay: 3 }}
                       />
 
-                      {/* Header */}
                       <div className="flex items-center justify-between mb-6 relative">
                         <div>
                           <h3 className="text-white font-bold text-sm flex items-center gap-2">
@@ -696,7 +681,7 @@ const Profile = () => {
                           <p className="text-slate-600 text-xs mt-0.5">Derived from your memories by AI</p>
                         </div>
                         <motion.button
-                          onClick={() => navigate("/personality")}
+                          onClick={() => navigate("/insights")}
                           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all relative overflow-hidden"
                           style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 4px 16px rgba(79,70,229,0.3)" }}
                           whileHover={{ scale: 1.05, boxShadow: "0 4px 24px rgba(124,58,237,0.5)" }}
@@ -709,19 +694,17 @@ const Profile = () => {
                             transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1 }}
                           />
                           <span className="relative flex items-center gap-2">
-                            <Brain className="w-3.5 h-3.5" /> Full Report
+                            <Activity className="w-3.5 h-3.5" /> Full Insights
                           </span>
                         </motion.button>
                       </div>
 
-                      {/* Rings grid */}
                       <div className="grid grid-cols-3 sm:grid-cols-5 gap-6 justify-items-center relative">
                         {Object.keys(TRAIT_INFO).map(key => (
                           <CircleRing key={key} traitKey={key} score={user.personality[key]} />
                         ))}
                       </div>
 
-                      {/* Dominant trait callout */}
                       {(() => {
                         const entries = Object.entries(user.personality).filter(([, v]) => v !== null);
                         if (!entries.length) return null;
@@ -789,7 +772,7 @@ const Profile = () => {
                           rotate: { duration: 6, repeat: Infinity },
                         }}
                       >
-                        <Brain className="w-6 h-6 text-indigo-400" />
+                        <Activity className="w-6 h-6 text-indigo-400" />
                       </motion.div>
                       <p className="text-white font-semibold mb-1">No personality data yet</p>
                       <p className="text-slate-500 text-sm mb-5">Take the quiz or create more memories so AI can build your profile</p>
@@ -813,7 +796,6 @@ const Profile = () => {
                 </motion.div>
               )}
 
-              {/* ── About ── */}
               {activeTab === "about" && (
                 <motion.div
                   key="about"
@@ -887,7 +869,6 @@ const Profile = () => {
 
       <MobileBottomNav />
 
-      {/* Profile picture modal */}
       <AnimatePresence>
         {showPictureModal && (profilePicturePreview || user.profilePicture) && (
           <motion.div

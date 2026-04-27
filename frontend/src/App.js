@@ -16,8 +16,7 @@ import UserProfile from "./pages/UserProfile";
 import SearchUsers from "./pages/SearchUsers";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
-import Bookmarks from "./pages/Bookmarks";
-import PersonalityPage from "./pages/PersonalityPage";
+import Insights from "./pages/Insights";
 import ReportsPage from "./pages/ReportsPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AllUsers from "./pages/admin/AllUsers";
@@ -119,8 +118,7 @@ function App() {
             <Route path="/search" element={<ProtectedRoute><SearchUsers /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-            <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
-            <Route path="/personality" element={<ProtectedRoute><PersonalityPage /></ProtectedRoute>} />
+            <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/wallet-test" element={<WalletTestPage />} />
 
