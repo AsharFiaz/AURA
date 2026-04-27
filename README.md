@@ -98,10 +98,20 @@ npm start
 App opens automatically at http://localhost:3000
 And make sure when you start that session to:
 
-Run npx hardhat node in Terminal 1
-Run npx hardhat run scripts/deploy.js --network localhost in Terminal 2
-Reset MetaMask account (Settings → Advanced → Reset Account)
-Update CONTRACT_ADDRESS in blockchain.js if the address changed
+# 1. Drop the script above into backend/scripts/clearNFTs.js
+
+# 2. Run it
+cd backend
+node scripts/clearNFTs.js
+
+# 3. Restart Hardhat (in your hardhat terminal: Ctrl+C, then)
+cd blockchain
+npx hardhat node
+
+# 4. Redeploy in another terminal
+cd blockchain
+npx hardhat run scripts/deploy.js --network localhost
+# Confirm address still matches frontend/src/config/blockchain.js
 
 ##  Team
 

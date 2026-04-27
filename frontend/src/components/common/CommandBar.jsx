@@ -1,6 +1,7 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { memo, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Wallet, Loader2 } from "lucide-react";
 import { useWallet } from "../../context/WalletContext";
 import { useAuth } from "../../context/AuthContext";
 import { showSuccess, showError } from "../../utils/toast";
@@ -11,17 +12,21 @@ import { showSuccess, showError } from "../../utils/toast";
  */
 const CommandBar = memo(({ recentActivityCount = 0, isLive = true }) => {
     const { user } = useAuth();
-    const { account, balance, chainId, isCorrectNetwork, connectWallet, switchToMumbai } = useWallet();
+    const {
+        account, balance, chainId, isCorrectNetwork,
+        connectWallet, disconnectWallet, switchToMumbai, connecting,
+    } = useWallet();
     const navigate = useNavigate();
     const [pulse, setPulse] = useState(0);
     const [copied, setCopied] = useState(false);
+    const [walletMenuOpen, setWalletMenuOpen] = useState(false);
 
     useEffect(() => {
         const i = setInterval(() => setPulse((p) => (p + 1) % 6), 400);
         return () => clearInterval(i);
     }, []);
 
-    const shortAddr = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Not connected";
+    const shortAddr = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : null;
     const networkLabel = chainId === 31337 ? "31337" : chainId === 80002 ? "amoy" : chainId === 80001 ? "mumbai" : chainId ? String(chainId) : "—";
 
     const handleSignalClick = () => window.location.reload();
@@ -31,8 +36,8 @@ const CommandBar = memo(({ recentActivityCount = 0, isLive = true }) => {
         else if (!isCorrectNetwork) await switchToMumbai();
         else navigate("/wallet-test");
     };
-    const handleWalletClick = async () => {
-        if (!account) { await connectWallet(); return; }
+    const handleCopyAddress = async () => {
+        if (!account) return;
         try {
             await navigator.clipboard.writeText(account);
             showSuccess("Wallet address copied!");
@@ -137,22 +142,137 @@ const CommandBar = memo(({ recentActivityCount = 0, isLive = true }) => {
             </div>
 
             <div className="flex items-center gap-2 text-[10px] tracking-widest uppercase">
-                <motion.button
-                    onClick={handleWalletClick}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    title={account ? "Click to copy address" : "Connect wallet"}
-                >
-                    <div className="text-right">
-                        <div className={`font-mono ${account ? "text-slate-300" : "text-indigo-400"} group-hover:text-white transition-colors`}>
-                            {copied ? "Copied!" : shortAddr}
-                        </div>
-                        <div className="text-slate-600 group-hover:text-slate-400 transition-colors">
-                            {account && balance !== null ? `${balance} ${chainId === 31337 ? "ETH" : "MATIC"}` : "Click to link"}
-                        </div>
+
+                {/* ── Wallet — disconnected state ────────────────────────────── */}
+                {!account ? (
+                    <motion.button
+                        onClick={connectWallet}
+                        disabled={connecting}
+                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-white text-[11px] font-semibold transition-all relative overflow-hidden disabled:opacity-60"
+                        style={{
+                            background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                            boxShadow: "0 2px 12px rgba(79,70,229,0.4)",
+                            border: "1px solid rgba(167,139,250,0.3)",
+                        }}
+                        whileHover={!connecting ? { scale: 1.04, boxShadow: "0 2px 20px rgba(124,58,237,0.6)" } : {}}
+                        whileTap={!connecting ? { scale: 0.96 } : {}}
+                    >
+                        {!connecting && (
+                            <motion.div
+                                className="absolute inset-0"
+                                style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+                                animate={{ x: ["-100%", "100%"] }}
+                                transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1 }}
+                            />
+                        )}
+                        <span className="relative flex items-center gap-1.5 normal-case tracking-normal">
+                            {connecting ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Connecting…
+                                </>
+                            ) : (
+                                <>
+                                    <Wallet className="w-3.5 h-3.5" />
+                                    Connect Wallet
+                                </>
+                            )}
+                        </span>
+                    </motion.button>
+                ) : !isCorrectNetwork ? (
+                    /* ── Wallet — wrong network ─────────────────────────────── */
+                    <motion.button
+                        onClick={switchToMumbai}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-[11px] font-semibold relative overflow-hidden"
+                        style={{
+                            background: "linear-gradient(135deg, #b45309, #dc2626)",
+                            boxShadow: "0 2px 12px rgba(220,38,38,0.3)",
+                        }}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                    >
+                        <span className="relative normal-case tracking-normal">⚠ Wrong Network</span>
+                    </motion.button>
+                ) : (
+                    /* ── Wallet — connected state with dropdown ─────────────── */
+                    <div className="relative">
+                        <motion.button
+                            onClick={() => setWalletMenuOpen(p => !p)}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all"
+                            style={{
+                                background: "rgba(99,102,241,0.1)",
+                                border: "1px solid rgba(99,102,241,0.25)",
+                            }}
+                            whileHover={{ scale: 1.03, borderColor: "rgba(99,102,241,0.5)" }}
+                            whileTap={{ scale: 0.97 }}
+                            title="Wallet menu"
+                        >
+                            <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-400" />
+                            </span>
+                            <div className="text-right">
+                                <div className="font-mono text-slate-200 normal-case tracking-normal text-[11px]">
+                                    {copied ? "Copied!" : shortAddr}
+                                </div>
+                                <div className="text-slate-500 normal-case tracking-normal text-[9px]">
+                                    {balance !== null ? `${balance} ${chainId === 31337 ? "ETH" : "MATIC"}` : "—"}
+                                </div>
+                            </div>
+                        </motion.button>
+
+                        <AnimatePresence>
+                            {walletMenuOpen && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setWalletMenuOpen(false)}
+                                    />
+                                    <motion.div
+                                        className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden z-50"
+                                        style={{
+                                            background: "#0d0d1a",
+                                            border: "1px solid rgba(99,102,241,0.2)",
+                                            boxShadow: "0 16px 48px rgba(0,0,0,0.5)",
+                                        }}
+                                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                                        transition={{ duration: 0.15 }}
+                                    >
+                                        <div className="p-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                                            <p className="text-slate-500 text-[10px] uppercase tracking-widest mb-1">Connected</p>
+                                            <p className="text-white text-xs font-mono normal-case">{shortAddr}</p>
+                                            <p className="text-indigo-400 text-xs mt-1 normal-case tracking-normal">
+                                                {balance} {chainId === 31337 ? "ETH" : "MATIC"}
+                                            </p>
+                                        </div>
+                                        <div className="p-1.5">
+                                            <button
+                                                onClick={() => { handleCopyAddress(); setWalletMenuOpen(false); }}
+                                                className="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-300 hover:bg-white/5 transition-colors normal-case tracking-normal"
+                                            >
+                                                Copy address
+                                            </button>
+                                            <button
+                                                onClick={() => { navigate("/wallet-test"); setWalletMenuOpen(false); }}
+                                                className="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-300 hover:bg-white/5 transition-colors normal-case tracking-normal"
+                                            >
+                                                Wallet details
+                                            </button>
+                                            <button
+                                                onClick={() => { disconnectWallet(); setWalletMenuOpen(false); }}
+                                                className="w-full px-3 py-2 rounded-lg text-left text-xs text-red-400 hover:bg-red-400/10 transition-colors normal-case tracking-normal"
+                                            >
+                                                Disconnect
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
                     </div>
-                </motion.button>
+                )}
 
                 <motion.button
                     onClick={handleAvatarClick}
