@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useWallet } from "../context/WalletContext";
 import api from "../utils/api";
 import { showError, showSuccess } from "../utils/toast";
 import { MemoryCardSkeleton } from "../components/common/LoadingSkeleton";
@@ -10,9 +11,11 @@ import BombasticSidebar from "../components/common/BombasticSidebar";
 import CommandBar from "../components/common/CommandBar";
 import MobileTopBar from "../components/common/MobileTopBar";
 import MobileBottomNav from "../components/common/MobileBottomNav";
+import MintNFTButton from "../components/blockchain/MintNFTButton";
+import ConnectWallet from "../components/blockchain/ConnectWallet";
 import {
   Edit2, LogOut, Mail, User as UserIcon, Heart, Grid,
-  Sparkles, Trash2, Camera, X, BarChart2, Activity,
+  Sparkles, Trash2, Camera, X, BarChart2, Activity, Wallet,
 } from "lucide-react";
 
 const TRAIT_INFO = {
@@ -97,6 +100,7 @@ const Profile = () => {
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const [showPictureModal, setShowPictureModal] = useState(false);
   const { user, token, logout, login, refreshUser } = useAuth();
+  const { account, isCorrectNetwork } = useWallet();
   const navigate = useNavigate();
   const [editUsername, setEditUsername] = useState(user?.username || "");
 
@@ -163,6 +167,14 @@ const Profile = () => {
     } catch (e) { showError(e.response?.data?.message || "Failed to delete memory"); }
   };
 
+  // Called after a successful mint — patches the local memory list so the
+  // button immediately turns into a "Minted" badge without a re-fetch.
+  const handleMemoryMinted = (memoryId, mintData) => {
+    setMemories(prev =>
+      prev.map(m => m._id === memoryId ? { ...m, ...mintData } : m)
+    );
+  };
+
   const getMemberSince = () => {
     if (!user?.createdAt) return "Recently";
     return new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -170,6 +182,7 @@ const Profile = () => {
 
   const hasPersonality = user?.personality && Object.values(user.personality).some(v => v !== null);
   const totalLikes = memories.reduce((sum, m) => sum + (m.likesCount || 0), 0);
+  const mintedCount = memories.filter(m => m.nftTokenId).length;
 
   if (!user) return null;
 
@@ -370,14 +383,65 @@ const Profile = () => {
               </div>
             </motion.div>
 
+            {/* ── Wallet status banner ─────────────────────────────────────── */}
+            <AnimatePresence>
+              {(!account || !isCorrectNetwork) && (
+                <motion.div
+                  className="rounded-2xl p-4 flex items-center gap-3 relative overflow-hidden"
+                  style={{
+                    background: !account
+                      ? "rgba(99,102,241,0.08)"
+                      : "rgba(245,158,11,0.08)",
+                    backdropFilter: "blur(10px)",
+                    border: !account
+                      ? "1px solid rgba(99,102,241,0.25)"
+                      : "1px solid rgba(245,158,11,0.3)",
+                  }}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 opacity-30 pointer-events-none"
+                    style={{
+                      background: !account
+                        ? "linear-gradient(90deg, transparent, rgba(167,139,250,0.1), transparent)"
+                        : "linear-gradient(90deg, transparent, rgba(245,158,11,0.1), transparent)",
+                    }}
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 4, repeat: Infinity, repeatDelay: 1 }}
+                  />
+                  <motion.div
+                    className="flex-shrink-0"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Wallet className={`w-6 h-6 ${!account ? "text-indigo-400" : "text-amber-400"}`} />
+                  </motion.div>
+                  <div className="flex-1 relative min-w-0">
+                    <p className="text-white font-semibold text-sm">
+                      {!account ? "Connect your wallet to mint NFTs" : "Wrong network — switch to mint NFTs"}
+                    </p>
+                    <p className="text-slate-500 text-xs mt-0.5">
+                      {!account
+                        ? "Turn your memories into blockchain-verified NFTs you can sell on the marketplace."
+                        : "Mint and trade requires connection to Hardhat Local network."}
+                    </p>
+                  </div>
+                  <ConnectWallet compact />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <motion.div
-              className="grid grid-cols-2 md:grid-cols-4 gap-3"
+              className="grid grid-cols-2 md:grid-cols-5 gap-3"
               initial="hidden"
               animate="visible"
               variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } } }}
             >
               {[
                 { label: "Memories", value: memories.length, color: "#a78bfa" },
+                { label: "NFTs", value: mintedCount, color: "#818cf8" },
                 { label: "Likes", value: totalLikes, color: "#ec4899" },
                 { label: "Followers", value: user.followers?.length || 0, color: "#34d399" },
                 { label: "Following", value: user.following?.length || 0, color: "#fbbf24" },
@@ -600,41 +664,87 @@ const Profile = () => {
                           style={{
                             background: "rgba(19,19,42,0.7)",
                             backdropFilter: "blur(10px)",
-                            border: "1px solid rgba(167,139,250,0.1)",
+                            border: memory.nftTokenId
+                              ? "1px solid rgba(74,222,128,0.2)"
+                              : "1px solid rgba(167,139,250,0.1)",
                           }}
                           variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
                           whileHover={{
-                            borderColor: "rgba(167,139,250,0.35)",
+                            borderColor: memory.nftTokenId
+                              ? "rgba(74,222,128,0.45)"
+                              : "rgba(167,139,250,0.35)",
                             scale: 1.02,
-                            boxShadow: "0 0 24px rgba(124,58,237,0.2)",
+                            boxShadow: memory.nftTokenId
+                              ? "0 0 24px rgba(74,222,128,0.2)"
+                              : "0 0 24px rgba(124,58,237,0.2)",
                           }}
                         >
                           {memory.image && (
-                            <div className="mb-3 rounded-xl overflow-hidden h-36">
+                            <div className="mb-3 rounded-xl overflow-hidden h-36 relative">
                               <img
                                 src={memory.image}
                                 alt=""
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               />
+                              {memory.nftTokenId && (
+                                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold text-green-300 flex items-center gap-1"
+                                  style={{
+                                    background: "rgba(0,0,0,0.65)",
+                                    backdropFilter: "blur(8px)",
+                                    border: "1px solid rgba(74,222,128,0.4)",
+                                  }}
+                                >
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                                  >
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                  </motion.div>
+                                  NFT
+                                </div>
+                              )}
                             </div>
                           )}
                           <p className="text-slate-200 text-sm font-medium line-clamp-2 mb-3">{memory.caption}</p>
                           <div
-                            className="flex items-center justify-between pt-2"
+                            className="flex items-center justify-between gap-2 pt-2"
                             style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
                           >
-                            <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                            <div className="flex items-center gap-1.5 text-slate-500 text-xs flex-shrink-0">
                               <Heart className="w-3.5 h-3.5" /><span>{memory.likesCount || 0}</span>
                             </div>
-                            <motion.button
-                              onClick={() => handleDeleteMemory(memory._id)}
-                              className="p-1.5 text-slate-700 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                              whileHover={{ scale: 1.15, rotate: 5 }}
-                              whileTap={{ scale: 0.85 }}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </motion.button>
+
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              <MintNFTButton
+                                memory={memory}
+                                onMinted={(mintData) => handleMemoryMinted(memory._id, mintData)}
+                              />
+                              <motion.button
+                                onClick={() => handleDeleteMemory(memory._id)}
+                                className="p-1.5 text-slate-700 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors flex-shrink-0"
+                                whileHover={{ scale: 1.15, rotate: 5 }}
+                                whileTap={{ scale: 0.85 }}
+                                title="Delete memory"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </motion.button>
+                            </div>
                           </div>
+
+                          {memory.nftTokenId && (
+                            <motion.button
+                              onClick={() => navigate("/marketplace")}
+                              className="mt-2 w-full py-1.5 rounded-lg text-[11px] font-semibold text-indigo-300 hover:text-white transition-colors"
+                              style={{
+                                background: "rgba(99,102,241,0.08)",
+                                border: "1px solid rgba(99,102,241,0.2)",
+                              }}
+                              whileHover={{ scale: 1.02, borderColor: "rgba(99,102,241,0.5)" }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              View on Marketplace →
+                            </motion.button>
+                          )}
                         </motion.div>
                       ))}
                     </motion.div>

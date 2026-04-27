@@ -9,6 +9,7 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../config/blockchain";
 import api from "../utils/api";
 import ConnectWallet from "../components/blockchain/ConnectWallet";
 import RecommendedNFTs from "../components/marketplace/RecommendedNFTs";
+import MyNFTs from "../components/marketplace/MyNFTs";
 import AnimatedBackdrop from "../components/common/AnimatedBackdrop";
 import BombasticSidebar from "../components/common/BombasticSidebar";
 import CommandBar from "../components/common/CommandBar";
@@ -16,7 +17,7 @@ import MobileTopBar from "../components/common/MobileTopBar";
 import MobileBottomNav from "../components/common/MobileBottomNav";
 import {
   Search, Sparkles, ShoppingBag, Tag, X, Loader2,
-  AlertCircle, CheckCircle2,
+  AlertCircle, CheckCircle2, Compass, Wallet,
 } from "lucide-react";
 
 // ─── List Modal ───────────────────────────────────────────────────────────────
@@ -47,8 +48,6 @@ const ListModal = ({ memory, tokenId, onClose, onSuccess }) => {
           exit={{ scale: 0.92, opacity: 0, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
           onClick={e => e.stopPropagation()}>
-
-          {/* Animated edge shimmer */}
           <motion.div
             className="absolute inset-0 opacity-50 pointer-events-none"
             style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.08), transparent)" }}
@@ -301,6 +300,7 @@ const BuyModal = ({ memory, tokenId, priceEth, onClose, onSuccess }) => {
 // ─── NFT Card ─────────────────────────────────────────────────────────────────
 const NFTCard = ({ memory, onRefresh }) => {
   const { user } = useAuth();
+  const { account } = useWallet();
   const { cancelListing, loading } = useMarketplace();
   const [listModal, setListModal] = useState(false);
   const [buyModal, setBuyModal] = useState(false);
@@ -309,7 +309,14 @@ const NFTCard = ({ memory, onRefresh }) => {
   const priceWei = memory.nftPrice || 0n;
   const priceEth = priceWei > 0n ? ethers.formatEther(priceWei) : null;
   const isListed = priceWei > 0n;
-  const isOwner = String(memory.user?._id || memory.user?.id) === String(user?.id);
+
+  // Use on-chain owner if we have it (passed by MyNFTs), otherwise fall back
+  // to the original minter. This means the action buttons reflect the *current*
+  // owner of the NFT, not the original minter.
+  const accountLower = account?.toLowerCase();
+  const isCurrentOwner = memory.currentOwner
+    ? memory.currentOwner === accountLower
+    : String(memory.user?._id || memory.user?.id) === String(user?.id);
 
   const handleCancel = async () => {
     const result = await cancelListing(tokenId);
@@ -331,7 +338,6 @@ const NFTCard = ({ memory, onRefresh }) => {
           boxShadow: "0 0 32px rgba(124,58,237,0.2)",
         }}>
 
-        {/* Shimmer on hover */}
         <motion.div
           className="absolute inset-0 opacity-0 pointer-events-none z-10"
           style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.05), transparent)" }}
@@ -339,7 +345,6 @@ const NFTCard = ({ memory, onRefresh }) => {
           transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
         />
 
-        {/* Image */}
         <div className="w-full h-44 relative overflow-hidden"
           style={{ background: "linear-gradient(135deg,rgba(79,70,229,0.15),rgba(124,58,237,0.1))" }}>
           {memory.image ? (
@@ -352,7 +357,6 @@ const NFTCard = ({ memory, onRefresh }) => {
               <p className="text-slate-600 text-xs">Memory NFT</p>
             </div>
           )}
-          {/* Price badge */}
           <motion.div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-white text-xs font-bold"
             style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "1px solid rgba(167,139,250,0.2)" }}
             animate={isListed ? {
@@ -365,7 +369,6 @@ const NFTCard = ({ memory, onRefresh }) => {
             transition={{ duration: 2, repeat: Infinity }}>
             {isListed ? `${priceEth} ETH` : "Not listed"}
           </motion.div>
-          {/* NFT badge */}
           <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-indigo-300"
             style={{ background: "rgba(99,102,241,0.2)", backdropFilter: "blur(8px)", border: "1px solid rgba(99,102,241,0.3)" }}>
             <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }}>
@@ -375,7 +378,6 @@ const NFTCard = ({ memory, onRefresh }) => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-4">
           <p className="text-white text-sm font-medium line-clamp-2 mb-2.5">{memory.caption}</p>
 
@@ -388,15 +390,16 @@ const NFTCard = ({ memory, onRefresh }) => {
           )}
 
           <div className="flex items-center gap-2 mb-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "10px" }}>
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-              {memory.user?.username?.charAt(0).toUpperCase() || "U"}
+            <div className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+              {memory.user?.profilePicture
+                ? <img src={memory.user.profilePicture} alt="" className="w-full h-full object-cover" />
+                : memory.user?.username?.charAt(0).toUpperCase() || "U"}
             </div>
             <span className="text-slate-500 text-xs">{memory.user?.username || "Unknown"}</span>
           </div>
 
-          {/* Action buttons */}
           <div className="flex gap-2">
-            {isOwner ? (
+            {isCurrentOwner ? (
               isListed ? (
                 <motion.button onClick={handleCancel} disabled={loading}
                   className="flex-1 py-2 rounded-xl text-red-300 text-xs font-semibold transition-all disabled:opacity-50"
@@ -454,6 +457,7 @@ const NFTCard = ({ memory, onRefresh }) => {
 
 // ─── Marketplace ──────────────────────────────────────────────────────────────
 const Marketplace = () => {
+  const [view, setView] = useState("browse"); // "browse" | "mine"
   const [nftMemories, setNftMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -481,10 +485,17 @@ const Marketplace = () => {
       const withPrices = await Promise.all(
         minted.map(async (m) => {
           try {
-            const price = await contract.tokenPrice(m.nftTokenId);
-            return { ...m, nftPrice: price };
+            const [price, owner] = await Promise.all([
+              contract.tokenPrice(m.nftTokenId),
+              contract.ownerOf(m.nftTokenId).catch(() => null),
+            ]);
+            return {
+              ...m,
+              nftPrice: price,
+              currentOwner: owner ? owner.toLowerCase() : null,
+            };
           } catch {
-            return { ...m, nftPrice: 0n };
+            return { ...m, nftPrice: 0n, currentOwner: null };
           }
         })
       );
@@ -558,30 +569,32 @@ const Marketplace = () => {
                 <p className="text-slate-600 text-xs mt-0.5">Buy and sell memory NFTs</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
-                    <input type="text" placeholder="Search NFTs…" value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="pl-9 pr-4 py-2 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none w-48 transition-all"
+                {view === "browse" && (
+                  <div className="hidden md:flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
+                      <input type="text" placeholder="Search NFTs…" value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none w-48 transition-all"
+                        style={{
+                          background: "rgba(19,19,42,0.8)",
+                          backdropFilter: "blur(10px)",
+                          border: "1px solid rgba(167,139,250,0.15)",
+                        }}
+                        onFocus={e => { e.target.style.borderColor = "rgba(167,139,250,0.5)"; e.target.style.boxShadow = "0 0 16px rgba(124,58,237,0.15)"; }}
+                        onBlur={e => { e.target.style.borderColor = "rgba(167,139,250,0.15)"; e.target.style.boxShadow = "none"; }} />
+                    </div>
+                    <select value={filter} onChange={e => setFilter(e.target.value)}
+                      className="px-3 py-2 rounded-xl text-slate-300 text-sm focus:outline-none cursor-pointer"
                       style={{
                         background: "rgba(19,19,42,0.8)",
                         backdropFilter: "blur(10px)",
                         border: "1px solid rgba(167,139,250,0.15)",
-                      }}
-                      onFocus={e => { e.target.style.borderColor = "rgba(167,139,250,0.5)"; e.target.style.boxShadow = "0 0 16px rgba(124,58,237,0.15)"; }}
-                      onBlur={e => { e.target.style.borderColor = "rgba(167,139,250,0.15)"; e.target.style.boxShadow = "none"; }} />
+                      }}>
+                      {["All", "Listed", "Not Listed"].map(v => <option key={v} value={v} style={{ background: "#13132a" }}>{v}</option>)}
+                    </select>
                   </div>
-                  <select value={filter} onChange={e => setFilter(e.target.value)}
-                    className="px-3 py-2 rounded-xl text-slate-300 text-sm focus:outline-none cursor-pointer"
-                    style={{
-                      background: "rgba(19,19,42,0.8)",
-                      backdropFilter: "blur(10px)",
-                      border: "1px solid rgba(167,139,250,0.15)",
-                    }}>
-                    {["All", "Listed", "Not Listed"].map(v => <option key={v} value={v} style={{ background: "#13132a" }}>{v}</option>)}
-                  </select>
-                </div>
+                )}
                 <ConnectWallet compact />
               </div>
             </div>
@@ -589,177 +602,232 @@ const Marketplace = () => {
 
           <div className="px-6 py-6 pb-24 lg:pb-8 space-y-6">
 
-            {/* Stats */}
-            <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-3"
-              initial="hidden" animate="visible"
-              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}>
+            {/* ── Browse / My NFTs tabs ──────────────────────────────────── */}
+            <div className="flex gap-2 relative" style={{ borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
               {[
-                { label: "Total NFTs", value: nftMemories.length, color: "#a78bfa" },
-                { label: "Listed", value: listedCount, color: "#34d399" },
-                { label: "Not Listed", value: notListedCount, color: "#94a3b8" },
-                { label: "Total Memories", value: stats.totalMemories, color: "#f59e0b" },
-              ].map(({ label, value, color }) => (
-                <motion.div key={label}
-                  className="rounded-2xl p-4 relative overflow-hidden"
-                  style={{
-                    background: "rgba(19,19,42,0.7)",
-                    backdropFilter: "blur(10px)",
-                    border: "1px solid rgba(167,139,250,0.1)",
-                  }}
-                  variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                  whileHover={{
-                    scale: 1.03,
-                    borderColor: "rgba(167,139,250,0.3)",
-                    boxShadow: `0 0 24px ${color}30`,
-                  }}>
-                  <p className="text-slate-600 text-xs mb-1 uppercase tracking-widest">{label}</p>
-                  <motion.p
-                    className="text-2xl font-bold text-white"
-                    initial={{ scale: 0.5 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                { id: "browse", label: "Browse", icon: Compass },
+                { id: "mine", label: "My NFTs", icon: Wallet },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const active = view === tab.id;
+                return (
+                  <motion.button
+                    key={tab.id}
+                    onClick={() => setView(tab.id)}
+                    className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${active ? "text-indigo-400" : "text-slate-500 hover:text-white"
+                      }`}
+                    whileHover={{ y: -1 }}
                   >
-                    {value}
-                  </motion.p>
-                  {/* Pulsing accent dot */}
-                  <motion.span
-                    className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full"
-                    style={{ background: color }}
-                    animate={{
-                      boxShadow: [
-                        `0 0 0px ${color}`,
-                        `0 0 8px ${color}`,
-                        `0 0 0px ${color}`,
-                      ],
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
+                    <Icon className="w-4 h-4" />
+                    {tab.label}
+                    {active && (
+                      <motion.div
+                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                        style={{
+                          background: "linear-gradient(90deg, #818cf8, #a78bfa, #818cf8)",
+                          boxShadow: "0 0 8px rgba(167,139,250,0.6)",
+                        }}
+                        layoutId="marketplaceTab"
+                      />
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
 
-            {/* No wallet warning */}
-            <AnimatePresence>
-              {!account && (
-                <motion.div className="rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden"
-                  style={{
-                    background: "rgba(99,102,241,0.08)",
-                    backdropFilter: "blur(10px)",
-                    border: "1px solid rgba(99,102,241,0.25)",
-                  }}
-                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <motion.div
-                    className="absolute inset-0 opacity-30 pointer-events-none"
-                    style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.1), transparent)" }}
-                    animate={{ x: ["-100%", "100%"] }}
-                    transition={{ duration: 4, repeat: Infinity, repeatDelay: 1 }}
-                  />
-                  <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }}>
-                    <Sparkles className="w-8 h-8 text-indigo-400 flex-shrink-0" />
+            <AnimatePresence mode="wait">
+              {view === "browse" ? (
+                <motion.div
+                  key="browse"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  {/* Stats */}
+                  <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+                    initial="hidden" animate="visible"
+                    variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}>
+                    {[
+                      { label: "Total NFTs", value: nftMemories.length, color: "#a78bfa" },
+                      { label: "Listed", value: listedCount, color: "#34d399" },
+                      { label: "Not Listed", value: notListedCount, color: "#94a3b8" },
+                      { label: "Total Memories", value: stats.totalMemories, color: "#f59e0b" },
+                    ].map(({ label, value, color }) => (
+                      <motion.div key={label}
+                        className="rounded-2xl p-4 relative overflow-hidden"
+                        style={{
+                          background: "rgba(19,19,42,0.7)",
+                          backdropFilter: "blur(10px)",
+                          border: "1px solid rgba(167,139,250,0.1)",
+                        }}
+                        variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                        whileHover={{
+                          scale: 1.03,
+                          borderColor: "rgba(167,139,250,0.3)",
+                          boxShadow: `0 0 24px ${color}30`,
+                        }}>
+                        <p className="text-slate-600 text-xs mb-1 uppercase tracking-widest">{label}</p>
+                        <motion.p
+                          className="text-2xl font-bold text-white"
+                          initial={{ scale: 0.5 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                        >
+                          {value}
+                        </motion.p>
+                        <motion.span
+                          className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full"
+                          style={{ background: color }}
+                          animate={{
+                            boxShadow: [
+                              `0 0 0px ${color}`,
+                              `0 0 8px ${color}`,
+                              `0 0 0px ${color}`,
+                            ],
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      </motion.div>
+                    ))}
                   </motion.div>
-                  <div className="flex-1 relative">
-                    <p className="text-white font-semibold text-sm">Connect your wallet to buy and sell NFTs</p>
-                    <p className="text-slate-500 text-xs mt-0.5">You need MetaMask connected to Hardhat Local to interact with the marketplace.</p>
+
+                  {/* No wallet warning */}
+                  <AnimatePresence>
+                    {!account && (
+                      <motion.div className="rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden"
+                        style={{
+                          background: "rgba(99,102,241,0.08)",
+                          backdropFilter: "blur(10px)",
+                          border: "1px solid rgba(99,102,241,0.25)",
+                        }}
+                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                        <motion.div
+                          className="absolute inset-0 opacity-30 pointer-events-none"
+                          style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.1), transparent)" }}
+                          animate={{ x: ["-100%", "100%"] }}
+                          transition={{ duration: 4, repeat: Infinity, repeatDelay: 1 }}
+                        />
+                        <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }}>
+                          <Sparkles className="w-8 h-8 text-indigo-400 flex-shrink-0" />
+                        </motion.div>
+                        <div className="flex-1 relative">
+                          <p className="text-white font-semibold text-sm">Connect your wallet to buy and sell NFTs</p>
+                          <p className="text-slate-500 text-xs mt-0.5">You need MetaMask connected to Hardhat Local to interact with the marketplace.</p>
+                        </div>
+                        <ConnectWallet />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Personalized recommendations */}
+                  <RecommendedNFTs
+                    NFTCard={NFTCard}
+                    currentUserAccount={account}
+                    onRefresh={fetchNFTs}
+                    limit={6}
+                  />
+
+                  {/* All NFTs Grid */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <motion.h2
+                        className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                      >
+                        <motion.span
+                          className="w-1.5 h-1.5 rounded-full bg-indigo-400"
+                          animate={{
+                            boxShadow: [
+                              "0 0 0px #a78bfa",
+                              "0 0 8px #a78bfa",
+                              "0 0 0px #a78bfa",
+                            ],
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                        <span className="bg-gradient-to-r from-slate-300 to-slate-500 bg-clip-text text-transparent">
+                          {filter === "All" ? "All NFTs" : filter}
+                        </span>
+                      </motion.h2>
+                      {!loading && <span className="text-slate-600 text-xs">{filtered.length} items</span>}
+                    </div>
+
+                    {loading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {[...Array(6)].map((_, i) => (
+                          <motion.div key={i}
+                            className="rounded-2xl overflow-hidden"
+                            style={{
+                              background: "rgba(19,19,42,0.7)",
+                              backdropFilter: "blur(10px)",
+                              border: "1px solid rgba(167,139,250,0.1)",
+                            }}
+                            animate={{ opacity: [0.4, 0.7, 0.4] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}>
+                            <div className="w-full h-44 bg-slate-800/40" />
+                            <div className="p-4 space-y-2">
+                              <div className="h-4 bg-slate-800/40 rounded w-3/4" />
+                              <div className="h-3 bg-slate-800/40 rounded w-1/2" />
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : filtered.length === 0 ? (
+                      <motion.div className="text-center py-16 rounded-2xl relative overflow-hidden"
+                        style={{
+                          background: "rgba(19,19,42,0.6)",
+                          backdropFilter: "blur(10px)",
+                          border: "1px solid rgba(167,139,250,0.1)",
+                        }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}>
+                        <motion.div
+                          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 relative"
+                          style={{ background: "rgba(99,102,241,0.1)" }}
+                          animate={{
+                            boxShadow: [
+                              "0 0 16px rgba(124,58,237,0.2)",
+                              "0 0 32px rgba(124,58,237,0.4)",
+                              "0 0 16px rgba(124,58,237,0.2)",
+                            ],
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <Sparkles className="w-7 h-7 text-indigo-400" />
+                        </motion.div>
+                        <p className="text-slate-400 text-sm mb-1 font-semibold">
+                          {nftMemories.length === 0 ? "No NFTs minted yet" : "No NFTs match your filter"}
+                        </p>
+                        {nftMemories.length === 0 && (
+                          <p className="text-slate-600 text-xs">Go to your profile and mint a memory as NFT first</p>
+                        )}
+                      </motion.div>
+                    ) : (
+                      <motion.div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                        initial="hidden" animate="visible"
+                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } }}>
+                        {filtered.map((memory) => (
+                          <NFTCard key={memory._id} memory={memory} onRefresh={fetchNFTs} />
+                        ))}
+                      </motion.div>
+                    )}
                   </div>
-                  <ConnectWallet />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="mine"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <MyNFTs NFTCard={NFTCard} onRefresh={fetchNFTs} />
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Personalized recommendations */}
-            <RecommendedNFTs
-              NFTCard={NFTCard}
-              currentUserAccount={account}
-              onRefresh={fetchNFTs}
-              limit={6}
-            />
-
-            {/* All NFTs Grid */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <motion.h2
-                  className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <motion.span
-                    className="w-1.5 h-1.5 rounded-full bg-indigo-400"
-                    animate={{
-                      boxShadow: [
-                        "0 0 0px #a78bfa",
-                        "0 0 8px #a78bfa",
-                        "0 0 0px #a78bfa",
-                      ],
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                  <span className="bg-gradient-to-r from-slate-300 to-slate-500 bg-clip-text text-transparent">
-                    {filter === "All" ? "All NFTs" : filter}
-                  </span>
-                </motion.h2>
-                {!loading && <span className="text-slate-600 text-xs">{filtered.length} items</span>}
-              </div>
-
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {[...Array(6)].map((_, i) => (
-                    <motion.div key={i}
-                      className="rounded-2xl overflow-hidden"
-                      style={{
-                        background: "rgba(19,19,42,0.7)",
-                        backdropFilter: "blur(10px)",
-                        border: "1px solid rgba(167,139,250,0.1)",
-                      }}
-                      animate={{ opacity: [0.4, 0.7, 0.4] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}>
-                      <div className="w-full h-44 bg-slate-800/40" />
-                      <div className="p-4 space-y-2">
-                        <div className="h-4 bg-slate-800/40 rounded w-3/4" />
-                        <div className="h-3 bg-slate-800/40 rounded w-1/2" />
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : filtered.length === 0 ? (
-                <motion.div className="text-center py-16 rounded-2xl relative overflow-hidden"
-                  style={{
-                    background: "rgba(19,19,42,0.6)",
-                    backdropFilter: "blur(10px)",
-                    border: "1px solid rgba(167,139,250,0.1)",
-                  }}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}>
-                  <motion.div
-                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 relative"
-                    style={{ background: "rgba(99,102,241,0.1)" }}
-                    animate={{
-                      boxShadow: [
-                        "0 0 16px rgba(124,58,237,0.2)",
-                        "0 0 32px rgba(124,58,237,0.4)",
-                        "0 0 16px rgba(124,58,237,0.2)",
-                      ],
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    <Sparkles className="w-7 h-7 text-indigo-400" />
-                  </motion.div>
-                  <p className="text-slate-400 text-sm mb-1 font-semibold">
-                    {nftMemories.length === 0 ? "No NFTs minted yet" : "No NFTs match your filter"}
-                  </p>
-                  {nftMemories.length === 0 && (
-                    <p className="text-slate-600 text-xs">Go to your feed and mint a memory as NFT first</p>
-                  )}
-                </motion.div>
-              ) : (
-                <motion.div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-                  initial="hidden" animate="visible"
-                  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } }}>
-                  {filtered.map((memory) => (
-                    <NFTCard key={memory._id} memory={memory} onRefresh={fetchNFTs} />
-                  ))}
-                </motion.div>
-              )}
-            </div>
           </div>
         </main>
       </div>

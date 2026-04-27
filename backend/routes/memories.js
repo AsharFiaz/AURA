@@ -9,7 +9,7 @@ const axios = require("axios");
 const {
   analyzeMemory,
   getRecommendedMemoryIds,
-  getMarketplaceRecommendations,   // ← ADDED
+  getMarketplaceRecommendations,
 } = require("../services/aiService");
 
 const videoUpload = multer({
@@ -121,7 +121,6 @@ router.get("/feed", auth, async (req, res) => {
 
     const viewerId = req.user.id.toString();
 
-    // Get viewer personality + find authors who have viewer in their followers
     const [viewer, authorsWhoAllowViewer] = await Promise.all([
       User.findById(viewerId).select("personality").lean(),
       User.find({ followers: viewerId }).select("_id").lean(),
@@ -132,15 +131,11 @@ router.get("/feed", auth, async (req, res) => {
     const p = viewer?.personality;
     const hasPersonality = p && Object.values(p).some(v => v !== null);
 
-    // Show a memory if:
-    // - visibility = 'public'  → everyone sees it
-    // - visibility = 'friends' → only if viewer is in the author's followers list
-    // - visibility = 'private' → only the author themselves (never shown to others)
     const visibilityFilter = {
       $or: [
         { visibility: "public" },
         { visibility: "friends", user: { $in: allowedAuthorIds } },
-        { visibility: "private", user: viewerId },  // only own private memories
+        { visibility: "private", user: viewerId },
       ],
     };
 
@@ -188,15 +183,11 @@ router.get("/feed", auth, async (req, res) => {
 });
 
 // ─── GET /api/memories/marketplace-recommend ──────────────────────────────────
-// ADDED — Returns NFT-minted memories ranked by the user's OCEAN vector,
-// excluding memories the viewer already owns. Falls back to a chronological
-// list of minted memories if the user has no personality vector yet.
 router.get("/marketplace-recommend", auth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
     const viewerId = req.user.id;
 
-    // Pull viewer's personality vector
     const viewer = await User.findById(viewerId).select("personality").lean();
     const p = viewer?.personality;
     const hasVector = p && ["O", "C", "E", "A", "N"].every(k => typeof p[k] === "number");
@@ -204,15 +195,9 @@ router.get("/marketplace-recommend", auth, async (req, res) => {
     let recommendations = [];
 
     if (hasVector) {
-      // Personalized path — use the recommendation engine
       recommendations = await getMarketplaceRecommendations(p, viewerId, limit);
     }
 
-    // Fallback path:
-    //   - User has no vector yet (didn't complete onboarding), OR
-    //   - The engine returned 0 matches (no NFTs match their growth profile)
-    // In either case, show all minted NFTs sorted by newest-first so the
-    // marketplace isn't empty.
     if (recommendations.length === 0) {
       recommendations = await Memory.find({
         nftTokenId: { $ne: null },
@@ -225,7 +210,6 @@ router.get("/marketplace-recommend", auth, async (req, res) => {
         .lean();
     }
 
-    // Format for frontend (likesCount, image/video defaults — matches /feed)
     const formatted = recommendations.map(m => ({
       ...m,
       likesCount: m.likes?.length || 0,
@@ -241,6 +225,53 @@ router.get("/marketplace-recommend", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("[marketplace-recommend] error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/memories/my-nfts ────────────────────────────────────────────────
+// Returns ALL minted memories the current user is associated with:
+//   - "minted" : memories where user.id === memory.user (they minted it,
+//                regardless of who owns it now on-chain)
+//   - "all"    : every minted memory in the system, so the frontend can
+//                cross-reference on-chain ownership (`ownerOf`) to find
+//                NFTs the user *bought* from someone else.
+//
+// The backend doesn't know who currently owns each token on-chain — only
+// MetaMask can answer that — so the frontend hydrates ownership info itself.
+router.get("/my-nfts", auth, async (req, res) => {
+  try {
+    const viewerId = req.user.id;
+
+    // Memories the user originally minted (still owned or sold)
+    const minted = await Memory.find({
+      user: viewerId,
+      nftTokenId: { $ne: null },
+    })
+      .populate("user", "username email profilePicture")
+      .sort({ nftMintedAt: -1 })
+      .lean();
+
+    // Every minted memory in the system — frontend filters by on-chain owner
+    const allMinted = await Memory.find({ nftTokenId: { $ne: null } })
+      .populate("user", "username email profilePicture")
+      .sort({ nftMintedAt: -1 })
+      .lean();
+
+    const format = m => ({
+      ...m,
+      likesCount: m.likes?.length || 0,
+      image: m.image || null,
+      video: m.video || null,
+    });
+
+    res.json({
+      success: true,
+      minted: minted.map(format),
+      all: allMinted.map(format),
+    });
+  } catch (err) {
+    console.error("[my-nfts] error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -262,14 +293,9 @@ router.post("/", auth, async (req, res) => {
     const saved = await memory.save();
     await saved.populate("user", "username email");
 
-    // ── Fire-and-forget AI analysis ──────────────────────────────────────
-    // We don't await this — user gets an instant response.
-    // The analysis runs in the background and stores the vector in Qdrant.
     if (caption || image || video) {
       setImmediate(async () => {
         try {
-          // For image/video we only have the Cloudinary URL at this point,
-          // not the raw buffer. Fetch the bytes so FastAPI can analyse them.
           let imageBuffer, imageMime, videoBuffer, videoMime;
 
           if (image) {
@@ -351,18 +377,14 @@ router.get("/user/:userId", auth, async (req, res) => {
 
     let query;
     if (isOwn) {
-      // Owner sees all their own memories including private
       query = { user: userId };
     } else {
-      // Check if viewer follows the author (viewer is in author's followers list)
       const author = await User.findById(userId).select("followers").lean();
       const isFollower = (author?.followers || []).map(id => id.toString()).includes(viewerId);
 
       if (isFollower) {
-        // Followers see public + friends only, never private
         query = { user: userId, visibility: { $in: ["public", "friends"] } };
       } else {
-        // Strangers see public only
         query = { user: userId, visibility: "public" };
       }
     }
@@ -372,7 +394,6 @@ router.get("/user/:userId", auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Count private memories so frontend can show locked placeholders
     const lockedCount = isOwn
       ? 0
       : await Memory.countDocuments({ user: userId, visibility: "private" });
@@ -413,9 +434,6 @@ router.get("/search", auth, async (req, res) => {
 
     const raw = q.trim();
 
-    // Build $or conditions:
-    // 1. caption contains the raw query (handles keywords + hashtags)
-    // 2. user's username — resolved via a separate User lookup
     const matchingUsers = await User.find({
       username: { $regex: raw, $options: "i" },
     }).select("_id").lean();
@@ -425,8 +443,8 @@ router.get("/search", auth, async (req, res) => {
     const memories = await Memory.find({
       visibility: "public",
       $or: [
-        { caption: { $regex: raw, $options: "i" } },   // keyword + hashtag match
-        { emotions: { $regex: raw, $options: "i" } },  // emotion tag match
+        { caption: { $regex: raw, $options: "i" } },
+        { emotions: { $regex: raw, $options: "i" } },
         ...(userIds.length ? [{ user: { $in: userIds } }] : []),
       ],
     })
@@ -450,12 +468,8 @@ router.get("/search", auth, async (req, res) => {
 });
 
 // ─── PATCH /api/memories/:id/ocean ───────────────────────────────────────────
-// Called by FastAPI after analysis to store the OCEAN vector on the memory.
-// No auth middleware — this is an internal service-to-service call protected
-// by a shared secret header instead.
 router.patch("/:id/ocean", async (req, res) => {
   try {
-    // Verify internal secret so only FastAPI can call this
     const secret = req.headers["x-internal-secret"];
     if (secret !== process.env.INTERNAL_SECRET) {
       return res.status(403).json({ success: false, message: "Forbidden" });
