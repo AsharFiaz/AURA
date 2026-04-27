@@ -4,6 +4,7 @@ const Memory = require("../models/Memory");
 const auth = require("../middleware/auth");
 const upload = require("../middleware/upload");
 const cloudinary = require("../config/cloudinary");
+const { getInsights } = require("../services/insightsService");
 
 const router = express.Router();
 
@@ -340,6 +341,30 @@ router.get("/me/report", auth, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/users/me/insights?range=week|month|all
+router.get("/me/insights", auth, async (req, res) => {
+  try {
+    const { range } = req.query;
+    const insights = await getInsights(req.user.id, range);
+    if (!insights) {
+      return res.status(404).json({
+        success: false,
+        message: "No insights found",
+      });
+    }
+    res.json({
+      success: true,
+      insights,
+    });
+  } catch (err) {
+    console.error("[insights] route failed:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching insights",
+    });
   }
 });
 

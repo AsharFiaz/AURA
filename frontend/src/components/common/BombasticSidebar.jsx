@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
     Plus, Bell, User as UserIcon, Home as HomeIcon,
-    Compass, ShoppingBag, Mail, Bookmark, LogOut,
+    Compass, ShoppingBag, Mail, Activity, LogOut,
 } from "lucide-react";
 
 /**
@@ -24,7 +24,7 @@ const BombasticSidebar = memo(() => {
         { icon: ShoppingBag, label: "Marketplace", path: "/marketplace", active: isActive("/marketplace") },
         { icon: Mail, label: "Messages", path: "/messages", active: isActive("/messages") },
         { icon: Bell, label: "Notifications", path: "/notifications", active: isActive("/notifications"), badge: true },
-        { icon: Bookmark, label: "Bookmarks", path: "/bookmarks", active: isActive("/bookmarks") },
+        { icon: Activity, label: "Insights", path: "/insights", active: isActive("/insights") },
         { icon: UserIcon, label: "Profile", path: "/profile", active: isActive("/profile") },
         // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [location.pathname]);
