@@ -6,6 +6,25 @@ A social platform for emotional storytelling. Users post "memories" (text, image
 
 ---
 
+## Demo Videos
+
+🎥 **Full project tour:** [Watch the complete walkthrough](https://youtu.be/dJMZ7-DFtSY)
+
+Or jump to a specific feature:
+
+| What it shows | Watch |
+|---|---|
+| Login & onboarding | [▶ Watch](https://youtu.be/Nau_aeeXwC0) |
+| OCEAN personality quiz, home feed & core features | [▶ Watch](https://youtu.be/PTcOPQsQOtA) |
+| Personality insights & OCEAN quiz retake (part 1) | [▶ Watch](https://youtu.be/uUMreZCPefU) |
+| Personality insights & OCEAN quiz retake (part 2) | [▶ Watch](https://youtu.be/cOX2aAMeJUg) |
+| Add profile picture | [▶ Watch](https://youtu.be/nmzAkrpk5lk) |
+| 3D orb field home page | [▶ Watch](https://youtu.be/7D9xel5P7n0) |
+| Buying & selling NFTs | [▶ Watch](https://youtu.be/rGNaSYhIy2g) |
+| Admin dashboard | [▶ Watch](https://youtu.be/Kk9Kt95atU0) |
+
+---
+
 ## Architecture
 
 AURA is made of **four services** that run together:
