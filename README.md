@@ -215,12 +215,3 @@ After deploying:
 - Ashar Fiaz 
 - Mohammad Fawad 
 
-## Supervisors
-
-- Mr. Inayat-Ur Rehman
-- Mr. Muhammad Rashid Mukhtar
-
-## Institution
-
-COMSATS University Islamabad
-Bachelor of Science in Computer Science (2022–2026)
