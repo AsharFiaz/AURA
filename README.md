@@ -211,9 +211,9 @@ After deploying:
 
 ## Team
 
-- Jazib Waqar (CIIT/FA22-BCS-035/ISB)
-- Ashar Fiaz (CIIT/FA22-BCS-018/ISB)
-- Mohammad Fawad (CIIT/FA22-BCS-046/ISB)
+- Jazib Waqar 
+- Ashar Fiaz 
+- Mohammad Fawad 
 
 ## Supervisors
 
