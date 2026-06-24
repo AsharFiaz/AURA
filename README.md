@@ -211,7 +211,7 @@ After deploying:
 
 ## Team
 
-- Jazib Waqar 
-- Ashar Fiaz 
+- Ashar Fiaz
+- Jazib Waqar  
 - Mohammad Fawad 
 
